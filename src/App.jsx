@@ -8,12 +8,15 @@ export default function App() {
   const [studentId, setStudentId] = useState(null)
 
   useEffect(() => {
-    // Get or create student ID from localStorage
-    let id = localStorage.getItem('studentId')
+    // Check if studentId is in URL (for shared links)
+    const params = new URLSearchParams(window.location.search)
+    const urlStudentId = params.get('studentId')
+
+    let id = urlStudentId || localStorage.getItem('studentId')
     if (!id) {
       id = 'kiara-' + Date.now()
-      localStorage.setItem('studentId', id)
     }
+    localStorage.setItem('studentId', id)
     setStudentId(id)
   }, [])
 

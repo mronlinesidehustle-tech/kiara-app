@@ -55,10 +55,7 @@ export default function MathLesson1({ studentId, onBack }) {
       const objName = OBJECT_NAMES[obj] || 'things'
       setTimeout(() => {
         speakText(
-          `Problem ${step}! ${fam} has ${g1} ${objName}. ` +
-          `Then ${fam} gets ${g2} more ${objName}. ` +
-          `Touch each one to count them. ` +
-          `You can tap "Listen" so I can hear how you count!`
+          `${fam} has ${g1} ${objName}. Then gets ${g2} more. How many altogether?`
         )
       }, 400)
     }
@@ -114,10 +111,7 @@ export default function MathLesson1({ studentId, onBack }) {
 
   // --- Start lesson ---
   const handleIntroClick = () => {
-    speakText(
-      "Alright, let's get started! I am going to show you two groups of objects. " +
-      "Touch each one to count it, and tell me how many there are altogether. Ready?"
-    )
+    speakText("Touch the objects to count them. Then tell me how many altogether. Ready?")
     setStep(1)
   }
 
@@ -132,22 +126,22 @@ export default function MathLesson1({ studentId, onBack }) {
       setFeedback('✅ That is right!')
       setFeedbackType('correct')
 
-      // Tailor praise based on how she worked through it
-      let praise = `That's right! ${correct} is correct! `
+      // Tailor praise — KEEP SENTENCES SHORT
+      let praise
       if (allSpoken.toLowerCase().includes('one') || allSpoken.toLowerCase().includes('1')) {
-        praise += `I loved how you counted out loud — you said every number! You are a fantastic counter!`
+        praise = `I love how you counted out loud!`
       } else {
-        praise += `You figured it out! You are so smart!`
+        praise = `You got it! Great job!`
       }
-      speakText(praise)
 
-      setTimeout(() => {
+      speakText(praise, () => {
+        // Wait for speech to finish before advancing
         if (step < 5) {
           setStep(step + 1)
         } else {
           finishLesson(newCorrectCount)
         }
-      }, 2800)
+      })
 
     } else {
       if (newAttemptCount === 1) {
@@ -156,29 +150,22 @@ export default function MathLesson1({ studentId, onBack }) {
         setTappedObjects(new Set())
         setTypedAnswer('')
 
-        let hint = `Hmm, not quite. Let's try once more. `
-        if (allSpoken.toLowerCase().includes("can't") || allSpoken.toLowerCase().includes("hard")) {
-          hint += `I know it is tricky, but you can do it. Let's count together again.`
-        } else {
-          hint += `Touch each ${objName === 'things' ? 'one' : objName.slice(0, -1)} and count carefully!`
-        }
+        const hint = `Let's try again. Count each one carefully.`
         speakText(hint)
 
       } else if (newAttemptCount === 2) {
-        setFeedback(`Let's count each group one at a time.`)
+        setFeedback(`Let's count each group.`)
         setFeedbackType('hint')
         setTappedObjects(new Set())
         setTypedAnswer('')
 
         const countGroup1 = Array.from({ length: group1Count }, (_, i) => i + 1).join('... ')
         speakText(
-          `I am going to help you. Let's count the first group together. ` +
-          `Ready? ${countGroup1}. That first group has ${group1Count}. ` +
-          `Now you count the second group by yourself — touch each one!`
+          `Let's count together: ${countGroup1}. Now you count the second group!`
         )
 
       } else {
-        setFeedback(`Count with Mrs. Love — touch each one!`)
+        setFeedback(`Count with me!`)
         setFeedbackType('hint')
         setTappedObjects(new Set())
         setTypedAnswer('')
@@ -186,9 +173,7 @@ export default function MathLesson1({ studentId, onBack }) {
         const total = group1Count + group2Count
         const countAll = Array.from({ length: total }, (_, i) => i + 1).join('... ')
         speakText(
-          `Okay, let's count everything together, nice and slow. Ready? Here we go. ` +
-          `${countAll}. ` +
-          `We counted all the way to... what number did we reach? You tell me!`
+          `Let's count all together: ${countAll}. What number did we reach?`
         )
       }
     }
