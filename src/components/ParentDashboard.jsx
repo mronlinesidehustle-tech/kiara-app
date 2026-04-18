@@ -76,19 +76,27 @@ export default function ParentDashboard({ studentId, onBack }) {
             </div>
 
             <div className="share-section">
-              <h3>📱 Share Progress</h3>
-              <p>Share this link with family:</p>
-              <div className="share-box">
-                <code>{window.location.origin}?studentId={studentId}</code>
-                <button
-                  onClick={() => {
-                    navigator.clipboard.writeText(`${window.location.origin}?studentId=${studentId}`)
-                    alert('Link copied to clipboard!')
-                  }}
-                  className="copy-btn"
-                >
-                  📋 Copy Link
-                </button>
+              <h3>📱 Share with Family</h3>
+
+              <div className="share-subsection">
+                <h4>See the same progress on another device</h4>
+                <p>Kiara's ID: <code className="student-id">{studentId}</code></p>
+                <p className="note">
+                  Dad, Grandma, and others can see the same dashboard on their phones
+                  by opening this link:
+                </p>
+                <div className="share-box">
+                  <code className="share-url">{window.location.origin}?studentId={studentId}</code>
+                  <button
+                    onClick={() => {
+                      navigator.clipboard.writeText(`${window.location.origin}?studentId=${studentId}`)
+                      alert('Link copied! Share with Dad, Grandma, etc.')
+                    }}
+                    className="copy-btn"
+                  >
+                    📋 Copy Dashboard Link
+                  </button>
+                </div>
               </div>
             </div>
           </>

@@ -10,26 +10,26 @@ const FAMILY_MEMBERS = [
 ]
 
 const OBJECTS = ['🍎', '🎈', '🧸', '🍪', '⭐', '🌸', '🚗']
-
-// Names for speech (TTS doesn't read emojis well)
 const OBJECT_NAMES = {
   '🍎': 'apples', '🎈': 'balloons', '🧸': 'teddy bears',
   '🍪': 'cookies', '⭐': 'stars', '🌸': 'flowers', '🚗': 'toy cars'
 }
 
 export default function MathLesson1({ studentId, onBack }) {
-  const [step, setStep] = useState(0)           // 0: intro, 1–5: problems, 6: done
+  const [step, setStep] = useState(0)
   const [group1Count, setGroup1Count] = useState(0)
   const [group2Count, setGroup2Count] = useState(0)
   const [tappedObjects, setTappedObjects] = useState(new Set())
   const [typedAnswer, setTypedAnswer] = useState('')
   const [feedback, setFeedback] = useState('')
-  const [feedbackType, setFeedbackType] = useState('')  // 'correct' | 'wrong' | 'hint'
+  const [feedbackType, setFeedbackType] = useState('')
   const [correctCount, setCorrectCount] = useState(0)
   const [currentFamily, setCurrentFamily] = useState('')
   const [currentObject, setCurrentObject] = useState('')
-  const [attemptCount, setAttemptCount] = useState(0)   // wrong attempts on current problem
+  const [attemptCount, setAttemptCount] = useState(0)
   const [isListening, setIsListening] = useState(false)
+  const [listeningTranscript, setListeningTranscript] = useState('')
+  const [allSpoken, setAllSpoken] = useState('')  // Cumulative transcript for the whole problem
   const recognizerRef = useRef(null)
 
   // --- Generate new problem when step advances ---
@@ -49,19 +49,59 @@ export default function MathLesson1({ studentId, onBack }) {
       setFeedback('')
       setFeedbackType('')
       setAttemptCount(0)
+      setListeningTranscript('')
+      setAllSpoken('')
 
       const objName = OBJECT_NAMES[obj] || 'things'
       setTimeout(() => {
         speakText(
           `Problem ${step}! ${fam} has ${g1} ${objName}. ` +
           `Then ${fam} gets ${g2} more ${objName}. ` +
-          `Touch each one to count them, then tell Mrs. Love how many altogether!`
+          `Touch each one to count them. ` +
+          `You can tap "Listen" so I can hear how you count!`
         )
       }, 400)
     }
   }, [step])
 
-  // --- Tap an object to count it (toggle) ---
+  // --- Start listening to Kiara work through the problem ---
+  const handleStartListening = () => {
+    if (isListening) {
+      recognizerRef.current?.stop()
+      return
+    }
+
+    stopSpeaking()
+
+    const recognizer = createSpeechRecognizer({
+      onResult: ({ transcript }) => {
+        // Accumulate what Kiara says as she works
+        setListeningTranscript(transcript)
+        setAllSpoken(prev => prev + ' ' + transcript)
+      },
+      onError: (err) => {
+        setIsListening(false)
+        if (err === 'not-supported') {
+          setFeedback('Voice not supported in this browser.')
+          setFeedbackType('wrong')
+        } else if (err === 'not-allowed') {
+          setFeedback('Microphone permission needed.')
+          setFeedbackType('wrong')
+        }
+      },
+      onEnd: () => setIsListening(false),
+    })
+
+    if (recognizer) {
+      recognizerRef.current = recognizer
+      recognizer.start()
+      setIsListening(true)
+      setListeningTranscript('')
+      speakText('I am listening! Count out loud so I can hear you!')
+    }
+  }
+
+  // --- Tap an object to count it ---
   const handleObjectTap = (objectId) => {
     const newTapped = new Set(tappedObjects)
     if (newTapped.has(objectId)) {
@@ -75,8 +115,8 @@ export default function MathLesson1({ studentId, onBack }) {
   // --- Start lesson ---
   const handleIntroClick = () => {
     speakText(
-      "Alright, let's get started! I'm going to show you two groups of objects. " +
-      "Touch each one to count it, and then tell me how many there are altogether. Ready?"
+      "Alright, let's get started! I am going to show you two groups of objects. " +
+      "Touch each one to count it, and tell me how many there are altogether. Ready?"
     )
     setStep(1)
   }
@@ -87,15 +127,18 @@ export default function MathLesson1({ studentId, onBack }) {
     const objName = OBJECT_NAMES[currentObject] || 'things'
 
     if (answer === correct) {
-      // CORRECT
       const newCorrectCount = correctCount + 1
       setCorrectCount(newCorrectCount)
       setFeedback('✅ That is right!')
       setFeedbackType('correct')
 
-      const praise = newAttemptCount === 1
-        ? `That's right! ${correct}! Excellent counting, Kiara! I am so proud of you!`
-        : `Yes! ${correct} is correct! See, you figured it out! You are a great counter!`
+      // Tailor praise based on how she worked through it
+      let praise = `That's right! ${correct} is correct! `
+      if (allSpoken.toLowerCase().includes('one') || allSpoken.toLowerCase().includes('1')) {
+        praise += `I loved how you counted out loud — you said every number! You are a fantastic counter!`
+      } else {
+        praise += `You figured it out! You are so smart!`
+      }
       speakText(praise)
 
       setTimeout(() => {
@@ -107,21 +150,21 @@ export default function MathLesson1({ studentId, onBack }) {
       }, 2800)
 
     } else {
-      // WRONG — give progressive hints, never give the answer away
-
       if (newAttemptCount === 1) {
-        // Hint 1: Gentle encouragement, reset taps, try again
-        setFeedback('Not quite — try touching each one again to count!')
+        setFeedback('Not quite — try again!')
         setFeedbackType('wrong')
         setTappedObjects(new Set())
         setTypedAnswer('')
-        speakText(
-          `Hmm, not quite. Let's try again. Touch each ${objName === 'things' ? 'one' : objName.slice(0, -1)} ` +
-          `one by one and count out loud as you go!`
-        )
+
+        let hint = `Hmm, not quite. Let's try once more. `
+        if (allSpoken.toLowerCase().includes("can't") || allSpoken.toLowerCase().includes("hard")) {
+          hint += `I know it is tricky, but you can do it. Let's count together again.`
+        } else {
+          hint += `Touch each ${objName === 'things' ? 'one' : objName.slice(0, -1)} and count carefully!`
+        }
+        speakText(hint)
 
       } else if (newAttemptCount === 2) {
-        // Hint 2: Count group 1 out loud together, let Kiara finish group 2
         setFeedback(`Let's count each group one at a time.`)
         setFeedbackType('hint')
         setTappedObjects(new Set())
@@ -129,14 +172,13 @@ export default function MathLesson1({ studentId, onBack }) {
 
         const countGroup1 = Array.from({ length: group1Count }, (_, i) => i + 1).join('... ')
         speakText(
-          `Let me help you get started. Let's count the first group together. ` +
+          `I am going to help you. Let's count the first group together. ` +
           `Ready? ${countGroup1}. That first group has ${group1Count}. ` +
           `Now you count the second group by yourself — touch each one!`
         )
 
       } else {
-        // Hint 3: Count ALL objects slowly — stop just before saying the total
-        setFeedback(`Count with Mrs. Love — touch each one as we count!`)
+        setFeedback(`Count with Mrs. Love — touch each one!`)
         setFeedbackType('hint')
         setTappedObjects(new Set())
         setTypedAnswer('')
@@ -162,95 +204,35 @@ export default function MathLesson1({ studentId, onBack }) {
     }
   }
 
-  // --- Mic button: listen for spoken answer ---
-  const handleMicPress = () => {
-    if (isListening) {
-      recognizerRef.current?.stop()
-      return
+  // --- Stop listening and submit final answer ---
+  const handleStopListeningAndSubmit = () => {
+    if (recognizerRef.current) {
+      recognizerRef.current.stop()
     }
+    setIsListening(false)
 
-    stopSpeaking()
+    // Extract final number from what she said
+    const allText = (allSpoken + ' ' + listeningTranscript).toLowerCase()
+    const finalNumber = extractNumber(allText)
 
-    const recognizer = createSpeechRecognizer({
-      onResult: ({ transcript, number }) => {
-        setIsListening(false)
-
-        // Check for frustration / confusion first
-        const sentiment = detectSentiment(transcript)
-
-        if (sentiment === 'frustrated') {
-          setFeedback("Take a deep breath — you can do this! 💛")
-          setFeedbackType('hint')
-          speakText(
-            "Hey, it's okay. Take a deep breath with me. " +
-            "I know this is a little tricky, but I believe in you. Let's try one more time together."
-          )
-          return
-        }
-
-        if (sentiment === 'confused') {
-          setFeedback("That's okay — let's count together!")
-          setFeedbackType('hint')
-          setTappedObjects(new Set())
-          const objName = OBJECT_NAMES[currentObject] || 'things'
-          speakText(
-            `That's perfectly okay if you're not sure! Touch each ${objName === 'things' ? 'one' : objName.slice(0, -1)} ` +
-            `and count out loud with me. Start from the first group!`
-          )
-          return
-        }
-
-        if (number !== null) {
-          setTypedAnswer(String(number))
-          const newAttemptCount = attemptCount + 1
-          setAttemptCount(newAttemptCount)
-          checkAnswer(number, newAttemptCount)
-        } else {
-          setFeedback("I didn't hear a number — try saying just the number, like 'five' or 'seven'!")
-          setFeedbackType('wrong')
-          speakText("Hmm, I didn't quite catch that. Try saying just the number — like 'five' or 'eight'!")
-        }
-      },
-      onError: (err) => {
-        setIsListening(false)
-        if (err === 'not-supported') {
-          setFeedback("Voice not supported in this browser. Please type your answer!")
-          setFeedbackType('wrong')
-        } else if (err === 'not-allowed') {
-          setFeedback("Microphone permission needed. You can type your answer below!")
-          setFeedbackType('wrong')
-        } else {
-          setFeedback("I didn't catch that — try again or type your answer!")
-          setFeedbackType('wrong')
-        }
-      },
-      onEnd: () => setIsListening(false),
-    })
-
-    if (recognizer) {
-      recognizerRef.current = recognizer
-      recognizer.start()
-      setIsListening(true)
-      speakText("I'm listening! Tell me how many altogether!")
+    if (finalNumber !== null) {
+      const newAttemptCount = attemptCount + 1
+      setAttemptCount(newAttemptCount)
+      setTypedAnswer('')
+      checkAnswer(finalNumber, newAttemptCount)
+    } else {
+      setFeedback(`I heard: "${listeningTranscript}" but I did not catch a number. Try typing it below!`)
+      setFeedbackType('wrong')
     }
-  }
-
-  // --- Save progress and go to end screen ---
-  const finishLesson = (finalCorrect) => {
-    saveProgress(studentId, {
-      lesson: 'math-lesson-1',
-      correctAnswers: finalCorrect,
-      totalProblems: 5,
-      timestamp: new Date().toISOString()
-    })
-    setStep(6)
   }
 
   // --- Back button: save partial progress if mid-lesson ---
   const handleBack = () => {
     stopSpeaking()
+    if (recognizerRef.current) {
+      recognizerRef.current.stop()
+    }
     if (step >= 1 && step <= 5 && step > 1) {
-      // They completed at least one problem
       saveProgress(studentId, {
         lesson: 'math-lesson-1',
         correctAnswers: correctCount,
@@ -272,7 +254,7 @@ export default function MathLesson1({ studentId, onBack }) {
           <div className="mrs-love-char">👩🏾‍🏫</div>
           <p className="lesson-title">Addition: Putting Things Together</p>
           <p className="lesson-description">
-            Mrs. Love is going to teach you how to add! We'll look at two groups of objects,
+            Mrs. Love is going to teach you how to add! We will look at two groups of objects,
             touch each one to count them, and figure out how many there are altogether.
           </p>
           <button className="btn-start" onClick={handleIntroClick}>
@@ -385,42 +367,65 @@ export default function MathLesson1({ studentId, onBack }) {
             ? 'Touch each one to count!'
             : tappedObjects.size === totalObjects
             ? `You counted all ${tappedObjects.size}! Now tell Mrs. Love!`
-            : `You've counted: ${tappedObjects.size}`
+            : `You have counted: ${tappedObjects.size}`
           }
         </div>
 
-        {/* Answer section */}
-        <div className="answer-section">
-          <p className="answer-prompt">How many altogether?</p>
-
-          <button
-            className={`btn-mic ${isListening ? 'listening' : ''}`}
-            onClick={handleMicPress}
-          >
-            {isListening ? '🔴 Listening...' : '🎤 Tell Mrs. Love!'}
-          </button>
-
-          <div className="answer-divider">— or type your answer —</div>
-
-          <div className="type-row">
-            <input
-              type="number"
-              value={typedAnswer}
-              onChange={(e) => setTypedAnswer(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && typedAnswer && handleSubmitTyped()}
-              placeholder="?"
-              min="0"
-              max="15"
-            />
+        {/* Listening section */}
+        {isListening && (
+          <div className="listening-box">
+            <div className="listening-indicator">
+              <span className="pulse"></span>
+              🔴 Mrs. Love is listening...
+            </div>
+            {listeningTranscript && (
+              <div className="transcript">
+                Kiara said: "<em>{listeningTranscript}</em>"
+              </div>
+            )}
             <button
-              className="btn-submit"
-              onClick={handleSubmitTyped}
-              disabled={!typedAnswer}
+              className="btn-stop-listening"
+              onClick={handleStopListeningAndSubmit}
             >
-              Check ✓
+              ✓ Done Counting
             </button>
           </div>
-        </div>
+        )}
+
+        {/* Answer section */}
+        {!isListening && (
+          <div className="answer-section">
+            <p className="answer-prompt">How many altogether?</p>
+
+            <button
+              className="btn-mic"
+              onClick={handleStartListening}
+            >
+              🎤 Listen to Kiara
+            </button>
+
+            <div className="answer-divider">— or type your answer —</div>
+
+            <div className="type-row">
+              <input
+                type="number"
+                value={typedAnswer}
+                onChange={(e) => setTypedAnswer(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && typedAnswer && handleSubmitTyped()}
+                placeholder="?"
+                min="0"
+                max="15"
+              />
+              <button
+                className="btn-submit"
+                onClick={handleSubmitTyped}
+                disabled={!typedAnswer}
+              >
+                Check ✓
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* Feedback message */}
         {feedback && (

@@ -160,6 +160,31 @@
 .share-section h3 {
   color: #667eea;
   margin-top: 0;
+  font-size: 1.3em;
+}
+
+.share-subsection {
+  background: white;
+  padding: 20px;
+  border-radius: 12px;
+  border-left: 4px solid #28a745;
+  margin-bottom: 15px;
+}
+
+.share-subsection h4 {
+  color: #333;
+  margin: 0 0 15px 0;
+  font-size: 1.1em;
+}
+
+.student-id {
+  background: #f0f4ff;
+  padding: 8px 12px;
+  border-radius: 6px;
+  border: 2px solid #667eea;
+  font-weight: bold;
+  color: #667eea;
+  font-size: 1.1em;
 }
 
 .share-section p {
@@ -167,10 +192,26 @@
   margin-bottom: 15px;
 }
 
+.note {
+  font-size: 0.95em;
+  color: #666;
+  margin-bottom: 15px !important;
+}
+
+.share-url {
+  background: white;
+  padding: 10px 15px;
+  border-radius: 8px;
+  border: 1px solid #ddd;
+  word-break: break-all;
+  font-size: 0.85em;
+}
+
 .share-box {
   display: flex;
   gap: 10px;
   align-items: center;
+  margin-bottom: 10px;
 }
 
 .share-box code {
