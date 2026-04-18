@@ -139,7 +139,7 @@ export default function MathLesson1({ studentId, onBack }) {
         if (step < 5) {
           setStep(step + 1)
         } else {
-          finishLesson(newCorrectCount)
+          setStep(6)
         }
       })
 
