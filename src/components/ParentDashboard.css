@@ -266,11 +266,59 @@
     text-align: right;
   }
 
+  .share-section {
+    padding: 15px;
+  }
+
+  .share-section h3 {
+    font-size: 1.1em;
+  }
+
+  .share-subsection {
+    padding: 15px;
+  }
+
+  .share-subsection h4 {
+    font-size: 0.95em;
+  }
+
+  .student-id {
+    font-size: 0.9em;
+    padding: 6px 10px;
+    word-break: break-all;
+    display: block;
+    margin-bottom: 10px;
+  }
+
+  .share-section p {
+    font-size: 0.9em;
+    margin-bottom: 10px;
+  }
+
+  .note {
+    font-size: 0.85em;
+    margin-bottom: 10px !important;
+  }
+
+  .share-url {
+    font-size: 0.75em;
+    padding: 8px 12px;
+    word-break: break-all;
+  }
+
   .share-box {
     flex-direction: column;
+    gap: 10px;
+  }
+
+  .share-box code {
+    font-size: 0.75em;
+    padding: 8px 12px;
   }
 
   .copy-btn {
     width: 100%;
+    font-size: 0.95em;
+    padding: 10px 15px;
   }
 }
