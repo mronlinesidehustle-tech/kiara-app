@@ -51,7 +51,7 @@ function HomePage({ onStartLesson, onViewDashboard }) {
         <p className="subtitle">Powered by Mrs. Love</p>
 
         <div className="mrs-love-intro">
-          <div className="character">👩‍🏫</div>
+          <div className="character">👩🏾‍🏫</div>
           <p className="intro-text">
             "Hello, Kiara! I'm Mrs. Love. Today we are going to learn about addition.
             We're going to have so much fun counting together!"
