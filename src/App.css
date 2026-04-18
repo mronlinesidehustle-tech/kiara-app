@@ -1,0 +1,120 @@
+.app-container {
+  min-height: 100vh;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+/* Home Page */
+.home-page {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  padding: 20px;
+}
+
+.home-content {
+  background: white;
+  border-radius: 20px;
+  padding: 40px;
+  max-width: 500px;
+  text-align: center;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+}
+
+.home-content h1 {
+  color: #667eea;
+  font-size: 2.5em;
+  margin-bottom: 10px;
+}
+
+.subtitle {
+  color: #764ba2;
+  font-size: 1.2em;
+  margin-bottom: 30px;
+  font-weight: 600;
+}
+
+.mrs-love-intro {
+  background: #f0f4ff;
+  padding: 20px;
+  border-radius: 15px;
+  margin: 30px 0;
+  border: 3px solid #667eea;
+}
+
+.character {
+  font-size: 4em;
+  margin-bottom: 15px;
+}
+
+.intro-text {
+  color: #333;
+  font-size: 1.1em;
+  line-height: 1.6;
+  font-style: italic;
+}
+
+.button-group {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  margin: 30px 0;
+}
+
+.btn {
+  padding: 15px 30px;
+  border: none;
+  border-radius: 10px;
+  font-size: 1.1em;
+  font-weight: bold;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.btn-primary {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+}
+
+.btn-primary:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 10px 25px rgba(102, 126, 234, 0.4);
+}
+
+.btn-secondary {
+  background: #f0f4ff;
+  color: #667eea;
+  border: 2px solid #667eea;
+}
+
+.btn-secondary:hover {
+  background: #667eea;
+  color: white;
+  transform: translateY(-3px);
+}
+
+.info-box {
+  background: #fff9e6;
+  padding: 15px;
+  border-radius: 10px;
+  margin-top: 20px;
+  color: #333;
+  font-size: 0.95em;
+  border-left: 4px solid #ffc107;
+}
+
+/* Responsive */
+@media (max-width: 600px) {
+  .home-content {
+    padding: 20px;
+  }
+
+  .home-content h1 {
+    font-size: 2em;
+  }
+
+  .character {
+    font-size: 3em;
+  }
+}

@@ -1,0 +1,322 @@
+.lesson-container {
+  min-height: 100vh;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+}
+
+.back-btn {
+  align-self: flex-start;
+  padding: 10px 15px;
+  background: rgba(255, 255, 255, 0.9);
+  border: none;
+  border-radius: 8px;
+  font-size: 1em;
+  cursor: pointer;
+  font-weight: bold;
+  color: #667eea;
+  margin-bottom: 20px;
+  transition: all 0.3s;
+}
+
+.back-btn:hover {
+  background: white;
+  transform: translateX(-5px);
+}
+
+.lesson-intro {
+  background: white;
+  border-radius: 20px;
+  padding: 40px;
+  text-align: center;
+  margin: auto;
+  max-width: 500px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+}
+
+.mrs-love-char {
+  font-size: 5em;
+  margin-bottom: 20px;
+}
+
+.lesson-title {
+  color: #667eea;
+  font-size: 2em;
+  margin-bottom: 15px;
+  font-weight: bold;
+}
+
+.lesson-description {
+  color: #333;
+  font-size: 1.1em;
+  line-height: 1.6;
+  margin-bottom: 30px;
+}
+
+.btn-start {
+  padding: 15px 40px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border: none;
+  border-radius: 10px;
+  font-size: 1.2em;
+  font-weight: bold;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.btn-start:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 15px 40px rgba(102, 126, 234, 0.4);
+}
+
+/* Lesson Content */
+.lesson-header {
+  background: rgba(255, 255, 255, 0.95);
+  padding: 15px 20px;
+  border-radius: 15px;
+  margin-bottom: 20px;
+  text-align: center;
+}
+
+.lesson-header h2 {
+  color: #667eea;
+  margin-bottom: 5px;
+}
+
+.progress {
+  color: #764ba2;
+  font-weight: bold;
+  font-size: 1.1em;
+}
+
+.lesson-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.mrs-love-instruction {
+  display: flex;
+  align-items: flex-start;
+  gap: 15px;
+  background: white;
+  padding: 20px;
+  border-radius: 15px;
+  box-shadow: 0 5px 20px rgba(0, 0, 0, 0.1);
+}
+
+.char {
+  font-size: 3em;
+  flex-shrink: 0;
+}
+
+.mrs-love-instruction p {
+  color: #333;
+  font-size: 1.2em;
+  line-height: 1.6;
+  margin: 0;
+}
+
+/* Objects Area */
+.objects-area {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 20px;
+  background: white;
+  padding: 30px;
+  border-radius: 15px;
+  flex-wrap: wrap;
+}
+
+.group-1,
+.group-2 {
+  text-align: center;
+}
+
+.group-label {
+  color: #667eea;
+  font-weight: bold;
+  margin-bottom: 10px;
+  font-size: 1.1em;
+}
+
+.objects {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: center;
+  min-width: 80px;
+  min-height: 60px;
+  padding: 10px;
+  background: #f0f4ff;
+  border-radius: 10px;
+}
+
+.object {
+  font-size: 2.5em;
+  cursor: pointer;
+  transition: all 0.2s;
+  padding: 5px;
+  border-radius: 5px;
+}
+
+.object:hover {
+  transform: scale(1.2);
+  background: rgba(255, 255, 0, 0.3);
+}
+
+.plus-sign {
+  font-size: 2.5em;
+  color: #667eea;
+  font-weight: bold;
+}
+
+/* Answer Section */
+.answer-section {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  background: white;
+  padding: 25px;
+  border-radius: 15px;
+}
+
+.answer-section label {
+  color: #667eea;
+  font-weight: bold;
+  font-size: 1.2em;
+}
+
+.answer-section input {
+  padding: 15px;
+  font-size: 1.5em;
+  border: 3px solid #667eea;
+  border-radius: 10px;
+  text-align: center;
+  font-weight: bold;
+}
+
+.answer-section input:focus {
+  outline: none;
+  border-color: #764ba2;
+  box-shadow: 0 0 10px rgba(102, 126, 234, 0.5);
+}
+
+.btn-submit {
+  padding: 15px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border: none;
+  border-radius: 10px;
+  font-size: 1.1em;
+  font-weight: bold;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.btn-submit:hover:not(:disabled) {
+  transform: translateY(-3px);
+  box-shadow: 0 10px 25px rgba(102, 126, 234, 0.4);
+}
+
+.btn-submit:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.feedback {
+  padding: 15px;
+  background: #f0f4ff;
+  border-radius: 10px;
+  text-align: center;
+  font-size: 1.2em;
+  font-weight: bold;
+  color: #333;
+}
+
+/* Lesson End */
+.lesson-end {
+  background: white;
+  border-radius: 20px;
+  padding: 50px;
+  text-align: center;
+  margin: auto;
+  max-width: 500px;
+}
+
+.celebration {
+  font-size: 5em;
+  margin-bottom: 20px;
+  animation: bounce 0.6s ease-in-out infinite;
+}
+
+@keyframes bounce {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-20px); }
+}
+
+.lesson-end h2 {
+  color: #667eea;
+  font-size: 2.5em;
+  margin-bottom: 20px;
+}
+
+.score {
+  color: #764ba2;
+  font-size: 1.5em;
+  margin-bottom: 20px;
+  font-weight: bold;
+}
+
+.mrs-love-message {
+  color: #333;
+  font-size: 1.2em;
+  line-height: 1.8;
+  margin: 30px 0;
+  background: #f0f4ff;
+  padding: 20px;
+  border-radius: 10px;
+  border-left: 4px solid #667eea;
+}
+
+.btn-home {
+  padding: 15px 40px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border: none;
+  border-radius: 10px;
+  font-size: 1.2em;
+  font-weight: bold;
+  cursor: pointer;
+  transition: all 0.3s;
+  margin-top: 20px;
+}
+
+.btn-home:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 15px 40px rgba(102, 126, 234, 0.4);
+}
+
+/* Responsive */
+@media (max-width: 600px) {
+  .objects-area {
+    gap: 10px;
+    padding: 15px;
+  }
+
+  .plus-sign {
+    font-size: 2em;
+  }
+
+  .object {
+    font-size: 2em;
+  }
+
+  .mrs-love-instruction p {
+    font-size: 1em;
+  }
+}
