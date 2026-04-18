@@ -1,40 +1,56 @@
 /**
  * Text-to-Speech using Web Speech API
- * Mrs. Love voice (African American woman, warm & encouraging)
+ * Mrs. Love — warm, encouraging African American kindergarten teacher
  */
 
-export function speakText(text) {
+let cachedVoice = null
+
+export function speakText(text, onEnd = null) {
   if (!('speechSynthesis' in window)) {
-    console.log('Speech Synthesis not supported');
-    return;
+    onEnd?.()
+    return
   }
 
-  // Cancel any ongoing speech
-  window.speechSynthesis.cancel();
+  window.speechSynthesis.cancel()
 
-  const utterance = new SpeechSynthesisUtterance(text);
+  const utterance = new SpeechSynthesisUtterance(text)
+  utterance.rate = 0.85   // Slightly slower — clear for kindergartner
+  utterance.pitch = 1.1   // Natural warm female pitch
+  utterance.volume = 1
 
-  // Voice settings for Mrs. Love
-  utterance.rate = 0.9; // Slightly slower for clarity
-  utterance.pitch = 1.2; // Warmer, slightly higher pitch
-  utterance.volume = 1;
+  if (onEnd) utterance.onend = onEnd
 
-  // Try to select female voice (varies by browser/OS)
-  const voices = window.speechSynthesis.getVoices();
-  const femaleVoice = voices.find(
-    voice => voice.name.includes('Female') || voice.name.includes('woman')
-  ) || voices.find(voice => voice.lang === 'en-US');
-
-  if (femaleVoice) {
-    utterance.voice = femaleVoice;
+  const doSpeak = () => {
+    if (!cachedVoice) {
+      const voices = window.speechSynthesis.getVoices()
+      if (voices.length) {
+        cachedVoice =
+          voices.find(v => v.name === 'Google US English') ||
+          voices.find(v => v.name === 'Samantha') ||
+          voices.find(v => v.name === 'Karen') ||
+          voices.find(v => v.lang === 'en-US' && v.localService) ||
+          voices.find(v => v.lang === 'en-US') ||
+          voices[0]
+      }
+    }
+    if (cachedVoice) utterance.voice = cachedVoice
+    window.speechSynthesis.speak(utterance)
   }
 
-  window.speechSynthesis.speak(utterance);
+  // Voices may not be loaded yet on first call
+  const voices = window.speechSynthesis.getVoices()
+  if (voices.length) {
+    doSpeak()
+  } else {
+    window.speechSynthesis.onvoiceschanged = () => {
+      cachedVoice = null
+      doSpeak()
+    }
+  }
 }
 
-// Load voices when available
-if ('speechSynthesis' in window) {
-  window.speechSynthesis.onvoiceschanged = () => {
-    window.speechSynthesis.getVoices();
-  };
+export function stopSpeaking() {
+  if ('speechSynthesis' in window) {
+    window.speechSynthesis.cancel()
+  }
 }

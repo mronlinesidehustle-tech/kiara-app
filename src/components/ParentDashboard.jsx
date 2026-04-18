@@ -11,26 +11,17 @@ export default function ParentDashboard({ studentId, onBack }) {
   })
 
   useEffect(() => {
-    loadSessions()
-  }, [studentId])
-
-  const loadSessions = async () => {
-    const data = await getProgress(studentId)
+    // Synchronous localStorage read — always up to date
+    const data = getProgress(studentId)
     setSessions(data)
 
-    // Calculate stats
     if (data.length > 0) {
       const totalCorrect = data.reduce((sum, s) => sum + (s.correctAnswers || 0), 0)
       const totalProblems = data.reduce((sum, s) => sum + (s.totalProblems || 0), 0)
       const avgScore = totalProblems > 0 ? Math.round((totalCorrect / totalProblems) * 100) : 0
-
-      setStats({
-        totalSessions: data.length,
-        totalCorrect,
-        averageScore: avgScore,
-      })
+      setStats({ totalSessions: data.length, totalCorrect, averageScore: avgScore })
     }
-  }
+  }, [studentId])
 
   return (
     <div className="dashboard-container">

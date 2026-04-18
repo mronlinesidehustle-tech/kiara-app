@@ -301,6 +301,138 @@
   box-shadow: 0 15px 40px rgba(102, 126, 234, 0.4);
 }
 
+/* Tap-to-count interaction */
+.object {
+  position: relative;
+}
+
+.object.tapped {
+  background: #d4edda;
+  border-radius: 8px;
+  transform: scale(0.95);
+  opacity: 0.85;
+}
+
+.tap-check {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  background: #28a745;
+  color: white;
+  border-radius: 50%;
+  font-size: 0.45em;
+  width: 18px;
+  height: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+  line-height: 1;
+}
+
+.tap-hint {
+  font-size: 0.9em;
+  color: #667eea;
+  font-style: italic;
+}
+
+.tap-counter {
+  background: white;
+  border-radius: 12px;
+  padding: 12px 20px;
+  text-align: center;
+  font-size: 1.1em;
+  font-weight: bold;
+  color: #555;
+  border: 2px dashed #667eea;
+}
+
+/* Answer section updates */
+.answer-prompt {
+  color: #667eea;
+  font-weight: bold;
+  font-size: 1.2em;
+  margin: 0 0 5px 0;
+  text-align: center;
+}
+
+.btn-mic {
+  padding: 18px;
+  background: linear-gradient(135deg, #28a745, #20c997);
+  color: white;
+  border: none;
+  border-radius: 12px;
+  font-size: 1.2em;
+  font-weight: bold;
+  cursor: pointer;
+  transition: all 0.3s;
+  width: 100%;
+  letter-spacing: 0.03em;
+}
+
+.btn-mic:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 10px 25px rgba(40, 167, 69, 0.4);
+}
+
+.btn-mic.listening {
+  background: linear-gradient(135deg, #dc3545, #c82333);
+  animation: pulse-mic 1s ease-in-out infinite;
+}
+
+@keyframes pulse-mic {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(220, 53, 69, 0.4); }
+  50% { box-shadow: 0 0 0 12px rgba(220, 53, 69, 0); }
+}
+
+.answer-divider {
+  text-align: center;
+  color: #aaa;
+  font-size: 0.9em;
+  margin: 4px 0;
+}
+
+.type-row {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.type-row input {
+  flex: 1;
+  padding: 15px;
+  font-size: 1.5em;
+  border: 3px solid #667eea;
+  border-radius: 10px;
+  text-align: center;
+  font-weight: bold;
+}
+
+.type-row input:focus {
+  outline: none;
+  border-color: #764ba2;
+  box-shadow: 0 0 10px rgba(102, 126, 234, 0.5);
+}
+
+/* Feedback color variants */
+.feedback-correct {
+  background: #d4edda;
+  color: #155724;
+  border-left: 4px solid #28a745;
+}
+
+.feedback-wrong {
+  background: #fff3cd;
+  color: #856404;
+  border-left: 4px solid #ffc107;
+}
+
+.feedback-hint {
+  background: #e8f4f8;
+  color: #0c5460;
+  border-left: 4px solid #17a2b8;
+}
+
 /* Responsive */
 @media (max-width: 600px) {
   .objects-area {

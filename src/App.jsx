@@ -53,8 +53,8 @@ function HomePage({ onStartLesson, onViewDashboard }) {
         <div className="mrs-love-intro">
           <div className="character">👩‍🏫</div>
           <p className="intro-text">
-            "Hello, baby! I'm Mrs. Love. Today we learning addition together, yes?
-            Let's have some fun!"
+            "Hello, Kiara! I'm Mrs. Love. Today we are going to learn about addition.
+            We're going to have so much fun counting together!"
           </p>
         </div>
 

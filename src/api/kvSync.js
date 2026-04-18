@@ -1,40 +1,26 @@
 /**
- * Vercel KV Storage Sync
- * Saves progress to Vercel KV and localStorage
+ * Progress Storage
+ * Primary source: localStorage (instant, always available, works offline)
+ * Best-effort: Vercel serverless sync (fire-and-forget)
  */
 
-export async function saveProgress(studentId, sessionData) {
-  // Save to localStorage first (offline)
-  const localKey = `progress-${studentId}`;
-  const sessions = JSON.parse(localStorage.getItem(localKey) || '[]');
-  sessions.push(sessionData);
-  localStorage.setItem(localKey, JSON.stringify(sessions));
+export function saveProgress(studentId, sessionData) {
+  // Always write to localStorage first — this is what the dashboard reads
+  const localKey = `progress-${studentId}`
+  const sessions = JSON.parse(localStorage.getItem(localKey) || '[]')
+  sessions.push(sessionData)
+  localStorage.setItem(localKey, JSON.stringify(sessions))
 
-  // Try to sync to server
-  try {
-    const response = await fetch('/api/progress', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        studentId,
-        sessionData,
-      }),
-    });
-    return await response.json();
-  } catch (error) {
-    console.log('Sync failed (offline mode)', error);
-    // Data is already in localStorage, will sync when back online
-  }
+  // Attempt server sync silently — failure is fine, localStorage is source of truth
+  fetch('/api/progress', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ studentId, sessionData }),
+  }).catch(() => {})
 }
 
-export async function getProgress(studentId) {
-  try {
-    const response = await fetch(`/api/progress?studentId=${studentId}`);
-    const data = await response.json();
-    return data.sessions || [];
-  } catch (error) {
-    // Fall back to localStorage
-    const localKey = `progress-${studentId}`;
-    return JSON.parse(localStorage.getItem(localKey) || '[]');
-  }
+export function getProgress(studentId) {
+  // Read directly from localStorage — synchronous, instant, always current
+  const localKey = `progress-${studentId}`
+  return JSON.parse(localStorage.getItem(localKey) || '[]')
 }
