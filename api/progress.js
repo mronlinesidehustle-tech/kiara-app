@@ -1,8 +1,32 @@
-// Vercel Serverless Function for syncing progress across devices
-// Note: Uses in-memory storage (resets on redeploy)
-// For production: migrate to Vercel KV, Supabase, or PostgreSQL
+// Vercel Serverless Function for syncing progress across devices.
+// Uses Vercel KV (Upstash Redis under the hood) for persistence.
+// If KV env vars are not configured, falls back to in-memory (ephemeral)
+// so local/preview deploys don't crash — but real cross-device sync
+// only works once KV is linked to the project.
 
-const dataStore = {}
+import { kv } from '@vercel/kv'
+
+// Fallback for environments where KV isn't configured.
+const memoryFallback = new Map()
+const hasKV = !!(process.env.KV_REST_API_URL && process.env.KV_REST_API_TOKEN)
+
+async function readSessions(studentId) {
+  const key = `progress:${studentId}`
+  if (hasKV) {
+    const val = await kv.get(key)
+    return Array.isArray(val) ? val : []
+  }
+  return memoryFallback.get(key) || []
+}
+
+async function writeSessions(studentId, sessions) {
+  const key = `progress:${studentId}`
+  if (hasKV) {
+    await kv.set(key, sessions)
+  } else {
+    memoryFallback.set(key, sessions)
+  }
+}
 
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*')
@@ -21,33 +45,30 @@ export default async function handler(req, res) {
 
   try {
     if (req.method === 'GET') {
-      // Fetch progress for a student
-      const sessions = dataStore[studentId] || []
+      const sessions = await readSessions(studentId)
       return res.status(200).json(sessions)
     }
 
     if (req.method === 'POST') {
-      // Save progress for a student
       const { data } = req.body
 
       if (!data) {
         return res.status(400).json({ error: 'data required' })
       }
 
-      if (!dataStore[studentId]) {
-        dataStore[studentId] = []
-      }
+      const sessions = await readSessions(studentId)
 
-      // Check if this exact session already exists (prevent duplicates)
-      const isDuplicate = dataStore[studentId].some(
+      // Duplicate prevention: same timestamp + same correctAnswers
+      const isDuplicate = sessions.some(
         s => s.timestamp === data.timestamp && s.correctAnswers === data.correctAnswers
       )
 
       if (!isDuplicate) {
-        dataStore[studentId].push(data)
+        sessions.push(data)
+        await writeSessions(studentId, sessions)
       }
 
-      return res.status(200).json({ success: true, sessions: dataStore[studentId] })
+      return res.status(200).json({ success: true, sessions })
     }
 
     return res.status(405).json({ error: 'Method not allowed' })

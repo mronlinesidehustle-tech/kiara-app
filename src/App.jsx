@@ -8,6 +8,16 @@ export default function App() {
   const [studentId, setStudentId] = useState(null)
 
   useEffect(() => {
+    // v1.5 fresh start: clear cached session data once so everyone moves
+    // to the new persistent KV store with a clean slate. StudentId is
+    // preserved so existing shared links keep working.
+    if (localStorage.getItem('app-version') !== 'v1.5') {
+      Object.keys(localStorage).forEach(k => {
+        if (k.startsWith('progress-')) localStorage.removeItem(k)
+      })
+      localStorage.setItem('app-version', 'v1.5')
+    }
+
     // Check if studentId is in URL (for shared links)
     const params = new URLSearchParams(window.location.search)
     const urlStudentId = params.get('studentId')

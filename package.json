@@ -10,14 +10,15 @@
     "deploy": "vercel"
   },
   "dependencies": {
-    "react": "^18.2.0",
-    "react-dom": "^18.2.0",
+    "@vercel/kv": "^3.0.0",
+    "axios": "^1.6.0",
     "firebase": "^10.7.0",
-    "axios": "^1.6.0"
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0"
   },
   "devDependencies": {
     "@vitejs/plugin-react": "^4.2.0",
-    "vite": "^5.0.0",
-    "vercel": "latest"
+    "vercel": "latest",
+    "vite": "^5.0.0"
   }
 }
