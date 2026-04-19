@@ -309,8 +309,19 @@
 .object.tapped {
   background: #ffe0e0;
   border-radius: 8px;
-  transform: scale(0.95);
-  opacity: 0.85;
+  transform: scale(0.85);
+  opacity: 0.4;  /* More dramatic fade so "removed" is obvious */
+}
+
+/* Disabled state: unmarked objects when target count already reached */
+.object-disabled {
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+.object-disabled:hover {
+  transform: none;
+  background: transparent;
 }
 
 /* Green checkmark for addition (if needed in future) */
@@ -331,22 +342,26 @@
   line-height: 1;
 }
 
-/* Red X for subtraction (removed objects) */
+/* Red X for subtraction (removed objects) — BIG and centered for 5-year-old visibility */
 .tap-check-remove {
   position: absolute;
-  top: -6px;
-  right: -6px;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
   background: #dc3545;
   color: white;
   border-radius: 50%;
-  font-size: 0.45em;
-  width: 18px;
-  height: 18px;
+  font-size: 1.2em;
+  width: 40px;
+  height: 40px;
   display: flex;
   align-items: center;
   justify-content: center;
   font-weight: bold;
   line-height: 1;
+  border: 3px solid white;
+  box-shadow: 0 3px 10px rgba(220, 53, 69, 0.5);
+  z-index: 2;
 }
 
 .tap-hint {
@@ -358,12 +373,62 @@
 .tap-counter {
   background: white;
   border-radius: 12px;
-  padding: 12px 20px;
+  padding: 16px 20px;
   text-align: center;
-  font-size: 1.1em;
+  font-size: 1.3em;
   font-weight: bold;
+  border: 3px dashed #667eea;
+  transition: all 0.3s;
+}
+
+/* State: waiting to start tapping */
+.tap-counter-start {
   color: #555;
-  border: 2px dashed #667eea;
+  border-color: #667eea;
+}
+
+/* State: some tapped but not done — amber pulse */
+.tap-counter-in-progress {
+  color: #856404;
+  background: #fff3cd;
+  border-color: #ffc107;
+  animation: gentlePulse 2s ease-in-out infinite;
+}
+
+/* State: target reached — green */
+.tap-counter-done {
+  color: #155724;
+  background: #d4edda;
+  border-color: #28a745;
+  font-size: 1.5em;
+}
+
+@keyframes gentlePulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.02); }
+}
+
+/* Explicit instruction box with big number */
+.tap-instruction {
+  padding: 14px 18px;
+  background: #fff3cd;
+  border-left: 5px solid #ffc107;
+  border-radius: 10px;
+  font-size: 1.15em;
+  color: #333;
+  font-weight: bold;
+  text-align: center;
+}
+
+.tap-number {
+  display: inline-block;
+  background: #dc3545;
+  color: white;
+  font-size: 1.6em;
+  padding: 2px 16px;
+  border-radius: 10px;
+  margin: 0 4px;
+  box-shadow: 0 2px 6px rgba(220, 53, 69, 0.4);
 }
 
 /* Listening Section */

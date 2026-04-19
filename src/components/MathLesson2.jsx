@@ -57,6 +57,7 @@ export default function MathLesson2({ studentId, onBack }) {
   const [listeningTranscript, setListeningTranscript] = useState('')
   const [allSpoken, setAllSpoken] = useState('')  // Cumulative transcript for the whole problem
   const [problemLocked, setProblemLocked] = useState(false)  // Drives UI disabled state
+  const [hasGuided, setHasGuided] = useState(false)  // Tracks if auto-guide voice has played this problem
   const problemLockedRef = useRef(false)  // Synchronous guard — immune to React state batching
   const recognizerRef = useRef(null)
   const lessonFamiliesRef = useRef([])  // Shuffled list of 5 unique family names for this lesson
@@ -82,6 +83,7 @@ export default function MathLesson2({ studentId, onBack }) {
       setAttemptCount(0)
       setListeningTranscript('')
       setAllSpoken('')
+      setHasGuided(false)  // Reset auto-guide flag for new problem
       problemLockedRef.current = false  // Reset ref synchronously
       setProblemLocked(false)  // Unlock UI for new problem
 
@@ -147,12 +149,25 @@ export default function MathLesson2({ studentId, onBack }) {
   const handleObjectTap = (objectId) => {
     const newTapped = new Set(tappedObjects)
     if (newTapped.has(objectId)) {
+      // Always allow untapping (to correct mistakes)
       newTapped.delete(objectId)
     } else {
+      // Only allow new taps if under the target — prevents over-tapping
+      if (tappedObjects.size >= removeCount) return
       newTapped.add(objectId)
     }
     setTappedObjects(newTapped)
   }
+
+  // --- Auto-guide voice when Kiara reaches target count ---
+  useEffect(() => {
+    if (tappedObjects.size === removeCount && removeCount > 0 && !hasGuided && !problemLocked && step > 0 && step <= 5) {
+      setHasGuided(true)
+      setTimeout(() => {
+        speakText(`Great! You took away ${removeCount}. Now count what's left and tell me the number!`)
+      }, 300)
+    }
+  }, [tappedObjects.size, removeCount, hasGuided, problemLocked, step])
 
   // --- Start lesson ---
   const handleIntroClick = () => {
@@ -350,9 +365,12 @@ export default function MathLesson2({ studentId, onBack }) {
           <p>
             <strong>{currentFamily}</strong> has <strong>{startCount}</strong> {currentObject}.
             Takes away <strong>{removeCount}</strong>.
-            <br />
-            <span className="tap-hint">Click the ones to take away — how many are left?</span>
           </p>
+        </div>
+
+        {/* Explicit tap instruction with big number */}
+        <div className="tap-instruction">
+          👆 Click <strong className="tap-number">{removeCount}</strong> {currentObject} to take away!
         </div>
 
         {/* Objects area - single group for subtraction */}
@@ -363,10 +381,11 @@ export default function MathLesson2({ studentId, onBack }) {
               {Array.from({ length: startCount }).map((_, i) => {
                 const id = `obj-${i}`
                 const isTapped = tappedObjects.has(id)
+                const isDisabled = !isTapped && tappedObjects.size >= removeCount
                 return (
                   <span
                     key={id}
-                    className={`object ${isTapped ? 'tapped' : ''}`}
+                    className={`object ${isTapped ? 'tapped' : ''} ${isDisabled ? 'object-disabled' : ''}`}
                     onClick={() => handleObjectTap(id)}
                   >
                     {currentObject}
@@ -378,13 +397,13 @@ export default function MathLesson2({ studentId, onBack }) {
           </div>
         </div>
 
-        {/* Running tap count */}
-        <div className="tap-counter">
+        {/* Running tap count with state-based styling */}
+        <div className={`tap-counter tap-counter-${tappedObjects.size === removeCount ? 'done' : tappedObjects.size > 0 ? 'in-progress' : 'start'}`}>
           {tappedObjects.size === 0
-            ? 'Click the ones to take away!'
+            ? `Click ${removeCount} to take away`
             : tappedObjects.size === removeCount
-            ? `You're taking away ${tappedObjects.size}! Count what's left!`
-            : `You're taking away: ${tappedObjects.size}`
+            ? `✅ ${tappedObjects.size} taken away! Now count what's left!`
+            : `${tappedObjects.size} of ${removeCount} taken away — keep going!`
           }
         </div>
 
