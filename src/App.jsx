@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import MathLesson1 from './components/MathLesson1'
+import MathLesson2 from './components/MathLesson2'
 import ParentDashboard from './components/ParentDashboard'
 import './App.css'
 
@@ -36,12 +37,18 @@ export default function App() {
     <div className="app-container">
       {page === 'home' && (
         <HomePage
-          onStartLesson={() => setPage('math-lesson-1')}
+          onSelectLesson={(lessonId) => setPage(lessonId)}
           onViewDashboard={() => setPage('dashboard')}
         />
       )}
       {page === 'math-lesson-1' && (
         <MathLesson1
+          studentId={studentId}
+          onBack={() => setPage('home')}
+        />
+      )}
+      {page === 'math-lesson-2' && (
+        <MathLesson2
           studentId={studentId}
           onBack={() => setPage('home')}
         />
@@ -56,7 +63,7 @@ export default function App() {
   )
 }
 
-function HomePage({ onStartLesson, onViewDashboard }) {
+function HomePage({ onSelectLesson, onViewDashboard }) {
   return (
     <div className="home-page">
       <div className="home-content">
@@ -66,14 +73,17 @@ function HomePage({ onStartLesson, onViewDashboard }) {
         <div className="mrs-love-intro">
           <div className="character">👩🏾‍🏫</div>
           <p className="intro-text">
-            "Hello, Kiara! I'm Mrs. Love. Today we are going to learn about addition.
-            We're going to have so much fun counting together!"
+            "Hello, Kiara! I'm Mrs. Love. Let's learn together!
+            Choose a lesson and we're going to have so much fun!"
           </p>
         </div>
 
         <div className="button-group">
-          <button className="btn btn-primary" onClick={onStartLesson}>
+          <button className="btn btn-primary" onClick={() => onSelectLesson('math-lesson-1')}>
             ▶️ Start Lesson (Addition)
+          </button>
+          <button className="btn btn-primary" onClick={() => onSelectLesson('math-lesson-2')}>
+            ▶️ Start Lesson (Subtraction)
           </button>
           <button className="btn btn-secondary" onClick={onViewDashboard}>
             📊 Parent Dashboard
