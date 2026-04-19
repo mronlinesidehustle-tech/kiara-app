@@ -1,31 +1,53 @@
 // Vercel Serverless Function for syncing progress across devices.
-// Uses Vercel KV (Upstash Redis under the hood) for persistence.
-// If KV env vars are not configured, falls back to in-memory (ephemeral)
-// so local/preview deploys don't crash — but real cross-device sync
-// only works once KV is linked to the project.
+// Uses Vercel KV / Upstash Redis for persistence.
+//
+// Env var compatibility: Vercel's new "Upstash for Redis" Marketplace
+// integration uses UPSTASH_REDIS_REST_URL / UPSTASH_REDIS_REST_TOKEN,
+// while the legacy Vercel KV uses KV_REST_API_URL / KV_REST_API_TOKEN.
+// We accept either so the function works regardless of which integration
+// the user configured in their Vercel dashboard.
 
-import { kv } from '@vercel/kv'
+import { createClient } from '@vercel/kv'
 
-// Fallback for environments where KV isn't configured.
+const url =
+  process.env.KV_REST_API_URL ||
+  process.env.UPSTASH_REDIS_REST_URL ||
+  null
+const token =
+  process.env.KV_REST_API_TOKEN ||
+  process.env.UPSTASH_REDIS_REST_TOKEN ||
+  null
+
+const kv = url && token ? createClient({ url, token }) : null
+
+// Fallback for environments where no Redis is configured.
 const memoryFallback = new Map()
-const hasKV = !!(process.env.KV_REST_API_URL && process.env.KV_REST_API_TOKEN)
 
 async function readSessions(studentId) {
   const key = `progress:${studentId}`
-  if (hasKV) {
-    const val = await kv.get(key)
-    return Array.isArray(val) ? val : []
+  if (kv) {
+    try {
+      const val = await kv.get(key)
+      return Array.isArray(val) ? val : []
+    } catch (err) {
+      console.error('KV get failed:', err)
+      return memoryFallback.get(key) || []
+    }
   }
   return memoryFallback.get(key) || []
 }
 
 async function writeSessions(studentId, sessions) {
   const key = `progress:${studentId}`
-  if (hasKV) {
-    await kv.set(key, sessions)
-  } else {
-    memoryFallback.set(key, sessions)
+  if (kv) {
+    try {
+      await kv.set(key, sessions)
+      return
+    } catch (err) {
+      console.error('KV set failed:', err)
+    }
   }
+  memoryFallback.set(key, sessions)
 }
 
 export default async function handler(req, res) {
@@ -68,7 +90,11 @@ export default async function handler(req, res) {
         await writeSessions(studentId, sessions)
       }
 
-      return res.status(200).json({ success: true, sessions })
+      return res.status(200).json({
+        success: true,
+        persistent: !!kv,
+        sessions,
+      })
     }
 
     return res.status(405).json({ error: 'Method not allowed' })

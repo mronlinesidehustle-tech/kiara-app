@@ -9,15 +9,17 @@ export default function ParentDashboard({ studentId, onBack }) {
     totalCorrect: 0,
     averageScore: 0,
   })
+  const [isSharedLink, setIsSharedLink] = useState(false)
 
   useEffect(() => {
     // Check if this is a shared link (studentId from URL param)
     const params = new URLSearchParams(window.location.search)
-    const isSharedLink = params.has('studentId')
+    const sharedLink = params.has('studentId')
+    setIsSharedLink(sharedLink)
 
     const loadData = async () => {
       // For shared links, try to fetch from server first (multi-device sync)
-      let data = isSharedLink ? await getProgressFromServer(studentId) : getProgress(studentId)
+      let data = sharedLink ? await getProgressFromServer(studentId) : getProgress(studentId)
 
       setSessions(data)
 
@@ -42,7 +44,16 @@ export default function ParentDashboard({ studentId, onBack }) {
 
         {sessions.length === 0 ? (
           <div className="no-data">
-            <p>No sessions yet. Start a lesson to see progress!</p>
+            {isSharedLink ? (
+              <>
+                <p>No sessions yet on Kiara's account.</p>
+                <p style={{ fontSize: '0.95em', color: '#999', marginTop: 8 }}>
+                  Once Kiara completes a lesson, her progress will show here automatically.
+                </p>
+              </>
+            ) : (
+              <p>No sessions yet. Start a lesson to see progress!</p>
+            )}
           </div>
         ) : (
           <>

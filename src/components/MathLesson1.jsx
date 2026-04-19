@@ -5,9 +5,29 @@ import { saveProgress } from '../api/kvSync'
 import { createSpeechRecognizer, extractNumber, detectSentiment } from '../utils/speechRecognition'
 
 const FAMILY_MEMBERS = [
-  'Daddy', 'Mommy', 'Kelani', 'Grandma', 'Grandpa', 'Nay',
+  'Daddy', 'Mommy', 'Kelani', 'Grandma', 'Granny', 'Grandpa', 'Nay',
   'Uncle Jair', 'GG', 'Jasmine', 'French Fries', 'Marcello'
 ]
+
+// Rotating praise lines — Mrs. Love says something different each correct answer.
+const PRAISE_LINES = [
+  'You got it! Great job!',
+  'You are awesome, Kiara!',
+  'Great job, Kiara!',
+  "You're doing a great job counting!",
+  'You are doing amazing!',
+  'Kiara, way to go!',
+  'Wow, that is right! Super work!',
+  'Yes! You nailed it!',
+  'High five, Kiara! You got it!',
+  "I'm so proud of you!",
+  'That is exactly right! Keep it up!',
+  'Beautiful counting, Kiara!',
+]
+
+function randomPraise() {
+  return PRAISE_LINES[Math.floor(Math.random() * PRAISE_LINES.length)]
+}
 
 const OBJECTS = ['🍎', '🎈', '🧸', '🍪', '⭐', '🌸', '🚗']
 const OBJECT_NAMES = {
@@ -146,12 +166,13 @@ export default function MathLesson1({ studentId, onBack }) {
       setFeedback('✅ That is right!')
       setFeedbackType('correct')
 
-      // Tailor praise — KEEP SENTENCES SHORT
+      // Random praise so Mrs. Love doesn't repeat herself.
+      // Special bonus line when Kiara counted out loud into the mic.
       let praise
       if (allSpoken.toLowerCase().includes('one') || allSpoken.toLowerCase().includes('1')) {
-        praise = `I love how you counted out loud!`
+        praise = `I love how you counted out loud! ${randomPraise()}`
       } else {
-        praise = `You got it! Great job!`
+        praise = randomPraise()
       }
 
       speakText(praise, () => {
