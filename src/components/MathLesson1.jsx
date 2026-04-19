@@ -61,6 +61,18 @@ export default function MathLesson1({ studentId, onBack }) {
     }
   }, [step])
 
+  // --- Save completed lesson when step reaches 6 ---
+  useEffect(() => {
+    if (step === 6) {
+      saveProgress(studentId, {
+        lesson: 'math-lesson-1',
+        correctAnswers: correctCount,
+        totalProblems: 5,
+        timestamp: new Date().toISOString()
+      })
+    }
+  }, [step, correctCount, studentId])
+
   // --- Start listening to Kiara work through the problem ---
   const handleStartListening = () => {
     if (isListening) {
@@ -260,14 +272,6 @@ export default function MathLesson1({ studentId, onBack }) {
         : correctCount >= 3
         ? `You got ${correctCount} out of 5! That is really good counting, Kiara! Keep it up!`
         : `You got ${correctCount} out of 5. Every time you practice, you get a little better. Let's try again soon!`
-
-    // Save completed lesson to progress tracker
-    saveProgress(studentId, {
-      lesson: 'math-lesson-1',
-      correctAnswers: correctCount,
-      totalProblems: 5,
-      timestamp: new Date().toISOString()
-    })
 
     return (
       <div className="lesson-container">

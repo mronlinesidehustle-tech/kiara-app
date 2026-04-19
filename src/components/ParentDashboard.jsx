@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { getProgress } from '../api/kvSync'
+import { getProgress, getProgressFromServer } from '../api/kvSync'
 import './ParentDashboard.css'
 
 export default function ParentDashboard({ studentId, onBack }) {
@@ -11,16 +11,25 @@ export default function ParentDashboard({ studentId, onBack }) {
   })
 
   useEffect(() => {
-    // Synchronous localStorage read — always up to date
-    const data = getProgress(studentId)
-    setSessions(data)
+    // Check if this is a shared link (studentId from URL param)
+    const params = new URLSearchParams(window.location.search)
+    const isSharedLink = params.has('studentId')
 
-    if (data.length > 0) {
-      const totalCorrect = data.reduce((sum, s) => sum + (s.correctAnswers || 0), 0)
-      const totalProblems = data.reduce((sum, s) => sum + (s.totalProblems || 0), 0)
-      const avgScore = totalProblems > 0 ? Math.round((totalCorrect / totalProblems) * 100) : 0
-      setStats({ totalSessions: data.length, totalCorrect, averageScore: avgScore })
+    const loadData = async () => {
+      // For shared links, try to fetch from server first (multi-device sync)
+      let data = isSharedLink ? await getProgressFromServer(studentId) : getProgress(studentId)
+
+      setSessions(data)
+
+      if (data.length > 0) {
+        const totalCorrect = data.reduce((sum, s) => sum + (s.correctAnswers || 0), 0)
+        const totalProblems = data.reduce((sum, s) => sum + (s.totalProblems || 0), 0)
+        const avgScore = totalProblems > 0 ? Math.round((totalCorrect / totalProblems) * 100) : 0
+        setStats({ totalSessions: data.length, totalCorrect, averageScore: avgScore })
+      }
     }
+
+    loadData()
   }, [studentId])
 
   return (
