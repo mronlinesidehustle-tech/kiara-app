@@ -53,11 +53,13 @@ export default function MathLesson1({ studentId, onBack }) {
   const [problemLocked, setProblemLocked] = useState(false)  // Drives UI disabled state
   const problemLockedRef = useRef(false)  // Synchronous guard — immune to React state batching
   const recognizerRef = useRef(null)
+  const lessonFamiliesRef = useRef([])  // Shuffled list of 5 unique family names for this lesson
 
   // --- Generate new problem when step advances ---
   useEffect(() => {
     if (step > 0 && step <= 5) {
-      const fam = FAMILY_MEMBERS[Math.floor(Math.random() * FAMILY_MEMBERS.length)]
+      // Pick from the pre-shuffled lesson list so names don't repeat within one lesson.
+      const fam = lessonFamiliesRef.current[step - 1]
       const obj = OBJECTS[Math.floor(Math.random() * OBJECTS.length)]
       const g1 = Math.floor(Math.random() * 5) + 1
       const g2 = Math.floor(Math.random() * 5) + 1
@@ -147,6 +149,9 @@ export default function MathLesson1({ studentId, onBack }) {
 
   // --- Start lesson ---
   const handleIntroClick = () => {
+    // Shuffle family members and take 5 unique names — one per problem, no repeats.
+    const shuffled = [...FAMILY_MEMBERS].sort(() => Math.random() - 0.5)
+    lessonFamiliesRef.current = shuffled.slice(0, 5)
     speakText("Touch the objects to count them. Then tell me how many altogether. Ready?")
     setStep(1)
   }
