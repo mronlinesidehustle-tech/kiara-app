@@ -30,6 +30,8 @@ export default function MathLesson1({ studentId, onBack }) {
   const [isListening, setIsListening] = useState(false)
   const [listeningTranscript, setListeningTranscript] = useState('')
   const [allSpoken, setAllSpoken] = useState('')  // Cumulative transcript for the whole problem
+  const [problemLocked, setProblemLocked] = useState(false)  // Drives UI disabled state
+  const problemLockedRef = useRef(false)  // Synchronous guard — immune to React state batching
   const recognizerRef = useRef(null)
 
   // --- Generate new problem when step advances ---
@@ -51,6 +53,8 @@ export default function MathLesson1({ studentId, onBack }) {
       setAttemptCount(0)
       setListeningTranscript('')
       setAllSpoken('')
+      problemLockedRef.current = false  // Reset ref synchronously
+      setProblemLocked(false)  // Unlock UI for new problem
 
       const objName = OBJECT_NAMES[obj] || 'things'
       setTimeout(() => {
@@ -66,7 +70,7 @@ export default function MathLesson1({ studentId, onBack }) {
     if (step === 6) {
       saveProgress(studentId, {
         lesson: 'math-lesson-1',
-        correctAnswers: correctCount,
+        correctAnswers: Math.min(correctCount, 5),  // Safety cap — never exceed totalProblems
         totalProblems: 5,
         timestamp: new Date().toISOString()
       })
@@ -129,10 +133,14 @@ export default function MathLesson1({ studentId, onBack }) {
 
   // --- Core answer check with 3-level progressive hints ---
   const checkAnswer = (answer, newAttemptCount) => {
+    if (problemLockedRef.current) return  // Synchronous guard — blocks rapid double-submits
+
     const correct = group1Count + group2Count
     const objName = OBJECT_NAMES[currentObject] || 'things'
 
     if (answer === correct) {
+      problemLockedRef.current = true  // Lock synchronously — second call in same tick hits guard above
+      setProblemLocked(true)            // Drive UI disabled state
       const newCorrectCount = correctCount + 1
       setCorrectCount(newCorrectCount)
       setFeedback('✅ That is right!')
@@ -230,10 +238,11 @@ export default function MathLesson1({ studentId, onBack }) {
       recognizerRef.current.stop()
     }
     if (step >= 1 && step <= 5 && step > 1) {
+      const completed = step - 1
       saveProgress(studentId, {
         lesson: 'math-lesson-1',
-        correctAnswers: correctCount,
-        totalProblems: step - 1,
+        correctAnswers: Math.min(correctCount, completed),  // Safety cap
+        totalProblems: completed,
         timestamp: new Date().toISOString()
       })
     }
@@ -397,6 +406,7 @@ export default function MathLesson1({ studentId, onBack }) {
             <button
               className="btn-mic"
               onClick={handleStartListening}
+              disabled={problemLocked}
             >
               🎤 Listen to Kiara
             </button>
@@ -416,7 +426,7 @@ export default function MathLesson1({ studentId, onBack }) {
               <button
                 className="btn-submit"
                 onClick={handleSubmitTyped}
-                disabled={!typedAnswer}
+                disabled={!typedAnswer || problemLocked}
               >
                 Check ✓
               </button>
