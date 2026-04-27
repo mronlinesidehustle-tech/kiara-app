@@ -60,7 +60,7 @@ function getStory(studentId) {
 }
 
 function parseSentences(story) {
-  return story.split('.').map(s => s.trim()).filter(Boolean)
+  return story.split(/[.!?]+/).map(s => s.trim()).filter(Boolean)
 }
 
 function wordOverlap(spoken, target) {
