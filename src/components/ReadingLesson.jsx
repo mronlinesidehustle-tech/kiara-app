@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import './ReadingLesson.css'
 import { speakText, stopSpeaking } from '../utils/voiceAgent'
 import { saveProgress } from '../api/kvSync'
@@ -102,6 +102,13 @@ export default function ReadingLesson({ studentId, onBack }) {
   const [isListening, setIsListening] = useState(false)
   const recognizerRef = useRef(null)
 
+  useEffect(() => {
+    return () => {
+      recognizerRef.current?.stop()
+      stopSpeaking()
+    }
+  }, [])
+
   // ── Intro ────────────────────────────────────────────────
   const handleStart = () => {
     sightScoreRef.current = 0
@@ -185,7 +192,7 @@ export default function ReadingLesson({ studentId, onBack }) {
       onResult: ({ transcript, allTranscripts }) => {
         if (wordLockedRef.current) return
         const allOptions = [transcript, ...(allTranscripts || [])]
-        const matched = allOptions.some(t => t.toLowerCase().trim() === targetWord.toLowerCase())
+        const matched = allOptions.some(t => t.toLowerCase().replace(/[^a-z\s]/g, '').trim() === targetWord.toLowerCase())
 
         if (matched) {
           wordLockedRef.current = true
@@ -233,3 +240,173 @@ export default function ReadingLesson({ studentId, onBack }) {
       setIsListening(true)
     }
   }
+
+  // ── Story phase: handle "Read this sentence!" tap ────────
+  const advanceSentence = (currentIndex, currentSentences) => {
+    const next = currentIndex + 1
+    if (next >= currentSentences.length) {
+      saveProgress(studentId, {
+        lesson: 'reading-lesson',
+        lessonType: 'reading',
+        sightWordsScore: sightScoreRef.current,
+        phonicsScore: phonicsScoreRef.current,
+        storyScore: storyScoreRef.current,
+        storyTotal: currentSentences.length,
+        correctAnswers: sightScoreRef.current + phonicsScoreRef.current + storyScoreRef.current,
+        totalProblems: 10 + currentSentences.length,
+        timestamp: new Date().toISOString(),
+      })
+      speakText('You did it! What an amazing reader you are!', () => setPhase('completion'))
+    } else {
+      setSentenceIndex(next)
+      sentenceLockedRef.current = false
+      setSentenceLocked(false)
+      setFeedback('')
+      setFeedbackType('')
+    }
+  }
+
+  const handleReadSentence = () => {
+    if (isListening) { recognizerRef.current?.stop(); return }
+    if (sentenceLockedRef.current) return
+    stopSpeaking()
+
+    const targetSentence = sentences[sentenceIndex]
+    const capturedIndex = sentenceIndex
+    const capturedSentences = sentences
+
+    const recognizer = createSpeechRecognizer({
+      onResult: ({ transcript }) => {
+        if (sentenceLockedRef.current) return
+        sentenceLockedRef.current = true
+        setSentenceLocked(true)
+        const overlap = wordOverlap(transcript, targetSentence)
+        if (overlap >= 0.7) {
+          storyScoreRef.current += 1
+          setStoryScore(storyScoreRef.current)
+          setFeedback('✅ Great reading!')
+          setFeedbackType('correct')
+          speakText(randomPraise(), () => advanceSentence(capturedIndex, capturedSentences))
+        } else {
+          setFeedback("Good try! Let's keep going.")
+          setFeedbackType('hint')
+          speakText("Good try, Kiara! Let's keep going!", () => advanceSentence(capturedIndex, capturedSentences))
+        }
+      },
+      onError: (err) => {
+        setIsListening(false)
+        if (err === 'not-supported') setFeedback('Voice not supported.')
+        else if (err === 'not-allowed') setFeedback('Microphone permission needed.')
+      },
+      onEnd: () => setIsListening(false),
+    })
+
+    if (recognizer) {
+      recognizerRef.current = recognizer
+      recognizer.start()
+      setIsListening(true)
+    }
+  }
+
+  // ── Render ────────────────────────────────────────────────
+  if (phase === 'intro') {
+    return (
+      <div className="reading-container">
+        <button className="reading-back-btn" onClick={onBack}>← Back</button>
+        <div className="reading-content">
+          <div className="reading-character">👩🏾‍🏫</div>
+          <p className="reading-speech">"Hello, Kiara! Let's practice our reading today! We'll do sight words, sound out some words, and then read a story together!"</p>
+          <button className="reading-btn reading-btn-primary" onClick={handleStart}>📖 Let's Read!</button>
+        </div>
+      </div>
+    )
+  }
+
+  if (phase === 'sight-words' || phase === 'phonics') {
+    const currentWord = wordList[wordIndex] || ''
+    const displayWord = phase === 'phonics'
+      ? currentWord.split('').join(' · ')
+      : currentWord
+    const phaseLabel = phase === 'sight-words' ? 'Sight Words' : 'Phonics'
+    const prompt = phase === 'sight-words'
+      ? '👩🏾‍🏫 "Can you read this word for me?"'
+      : '👩🏾‍🏫 "Let\'s sound this one out — what does it say?"'
+
+    return (
+      <div className="reading-container">
+        <button className="reading-back-btn" onClick={onBack}>← Back</button>
+        <div className="reading-content">
+          <div className="reading-progress-label">Word {wordIndex + 1} of {wordList.length} · {phaseLabel}</div>
+          <p className="reading-speech">{prompt}</p>
+          <div className="reading-word">{displayWord}</div>
+          {feedback && <div className={`reading-feedback reading-feedback-${feedbackType}`}>{feedback}</div>}
+          <button
+            className={`reading-btn reading-btn-primary${isListening ? ' reading-btn-listening' : ''}`}
+            onClick={handleReadWord}
+            disabled={wordLocked}
+          >
+            {isListening ? '🎙️ Listening...' : '🎤 Read it!'}
+          </button>
+          <div className="reading-dots">
+            {wordList.map((_, i) => (
+              <span key={i} className={`reading-dot${i < wordIndex ? ' reading-dot-done' : i === wordIndex ? ' reading-dot-active' : ''}`} />
+            ))}
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  if (phase === 'short-story') {
+    return (
+      <div className="reading-container">
+        <button className="reading-back-btn" onClick={onBack}>← Back</button>
+        <div className="reading-content">
+          <div className="reading-progress-label">Short Story · Sentence {sentenceIndex + 1} of {sentences.length}</div>
+          <p className="reading-speech">👩🏾‍🏫 "Now let's read our story together!"</p>
+          <div className="reading-sentences">
+            {sentences.map((s, i) => (
+              <div
+                key={i}
+                className={`reading-sentence${i === sentenceIndex ? ' reading-sentence-active' : i < sentenceIndex ? ' reading-sentence-done' : ' reading-sentence-upcoming'}`}
+              >
+                {s}.
+              </div>
+            ))}
+          </div>
+          {feedback && <div className={`reading-feedback reading-feedback-${feedbackType}`}>{feedback}</div>}
+          <button
+            className={`reading-btn reading-btn-story${isListening ? ' reading-btn-listening' : ''}`}
+            onClick={handleReadSentence}
+            disabled={sentenceLocked}
+          >
+            {isListening ? '🎙️ Listening...' : '🎤 Read this sentence!'}
+          </button>
+        </div>
+      </div>
+    )
+  }
+
+  if (phase === 'completion') {
+    const totalCorrect = sightScore + phonicsScore + storyScore
+    const totalProblems = 10 + sentences.length
+    const pct = Math.round((totalCorrect / totalProblems) * 100)
+    return (
+      <div className="reading-container">
+        <div className="reading-content reading-completion">
+          <div className="reading-character">🎉</div>
+          <h2>Amazing Reading, Kiara!</h2>
+          <div className="reading-score-grid">
+            <div className="reading-score-item"><span className="reading-score-num">{sightScore}/5</span><span className="reading-score-label">Sight Words</span></div>
+            <div className="reading-score-item"><span className="reading-score-num">{phonicsScore}/5</span><span className="reading-score-label">Phonics</span></div>
+            <div className="reading-score-item"><span className="reading-score-num">{storyScore}/{sentences.length}</span><span className="reading-score-label">Story</span></div>
+          </div>
+          <div className="reading-pct">{pct}% — {pct >= 80 ? '⭐ Superstar reader!' : 'Keep practicing!'}</div>
+          <button className="reading-btn reading-btn-primary" onClick={onBack}>← Back to Home</button>
+        </div>
+      </div>
+    )
+  }
+
+  return null
+}
