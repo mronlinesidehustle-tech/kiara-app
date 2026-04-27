@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import MathLesson1 from './components/MathLesson1'
 import MathLesson2 from './components/MathLesson2'
+import ReadingLesson from './components/ReadingLesson'
 import ParentDashboard from './components/ParentDashboard'
 import './App.css'
 
@@ -53,6 +54,12 @@ export default function App() {
           onBack={() => setPage('home')}
         />
       )}
+      {page === 'reading-lesson' && (
+        <ReadingLesson
+          studentId={studentId}
+          onBack={() => setPage('home')}
+        />
+      )}
       {page === 'dashboard' && (
         <ParentDashboard
           studentId={studentId}
@@ -84,6 +91,9 @@ function HomePage({ onSelectLesson, onViewDashboard }) {
           </button>
           <button className="btn btn-primary" onClick={() => onSelectLesson('math-lesson-2')}>
             ▶️ Start Lesson (Subtraction)
+          </button>
+          <button className="btn btn-primary" onClick={() => onSelectLesson('reading-lesson')}>
+            📖 Start Reading Lesson
           </button>
           <button className="btn btn-secondary" onClick={onViewDashboard}>
             📊 Parent Dashboard
