@@ -192,7 +192,8 @@ export default function ReadingLesson({ studentId, onBack }) {
       onResult: ({ transcript, allTranscripts }) => {
         if (wordLockedRef.current) return
         const allOptions = [transcript, ...(allTranscripts || [])]
-        const matched = allOptions.some(t => t.toLowerCase().replace(/[^a-z\s]/g, '').trim() === targetWord.toLowerCase())
+        const normalizedTarget = targetWord.toLowerCase().replace(/[^a-z\s]/g, '').trim()
+        const matched = allOptions.some(t => t.toLowerCase().replace(/[^a-z\s]/g, '').trim() === normalizedTarget)
 
         if (matched) {
           wordLockedRef.current = true
