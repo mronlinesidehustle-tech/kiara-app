@@ -107,7 +107,7 @@ export default function ParentDashboard({ studentId, onBack }) {
 
             <div className="sessions-list">
               <h2>Recent Sessions</h2>
-              {sessions.slice().reverse().map((session, idx) => (
+              {mathSessions.slice().reverse().map((session, idx) => (
                 <div key={idx} className="session-card">
                   <div className="session-left">
                     <p className="lesson-name">{session.lesson}</p>
