@@ -11,6 +11,9 @@ export default function ParentDashboard({ studentId, onBack }) {
   })
   const [isSharedLink, setIsSharedLink] = useState(false)
 
+  const readingSessions = sessions.filter(s => s.lessonType === 'reading')
+  const mathSessions = sessions.filter(s => !s.lessonType || s.lessonType !== 'reading')
+
   useEffect(() => {
     // Check if this is a shared link (studentId from URL param)
     const params = new URLSearchParams(window.location.search)
@@ -94,6 +97,36 @@ export default function ParentDashboard({ studentId, onBack }) {
                 </div>
               ))}
             </div>
+
+            {readingSessions.length > 0 && (
+              <div className="sessions-list" style={{ marginTop: 24 }}>
+                <h2>📖 Reading Sessions</h2>
+                {readingSessions.slice().reverse().map((session, idx) => (
+                  <div key={idx} className="session-card">
+                    <div className="session-left">
+                      <p className="lesson-name">Reading Lesson</p>
+                      <p className="session-date">
+                        {new Date(session.timestamp).toLocaleDateString()} @{' '}
+                        {new Date(session.timestamp).toLocaleTimeString()}
+                      </p>
+                      <p style={{ fontSize: '0.85em', color: '#64748b', margin: '2px 0 0' }}>
+                        Sight Words: {session.sightWordsScore ?? '—'}/5 ·{' '}
+                        Phonics: {session.phonicsScore ?? '—'}/5 ·{' '}
+                        Story: {session.storyScore ?? '—'}/{session.storyTotal ?? '—'}
+                      </p>
+                    </div>
+                    <div className="session-right">
+                      <div className="score-badge">
+                        {session.correctAnswers}/{session.totalProblems}
+                      </div>
+                      <p className="percentage">
+                        {Math.round((session.correctAnswers / session.totalProblems) * 100)}%
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
 
             <div className="share-section">
               <h3>📱 Share with Family</h3>
