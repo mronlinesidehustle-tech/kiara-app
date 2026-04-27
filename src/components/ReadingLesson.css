@@ -14,6 +14,9 @@
   font-size: 1rem;
   color: #6d28d9;
   cursor: pointer;
+  min-height: 44px;
+  display: flex;
+  align-items: center;
   padding: 8px 0;
   margin-bottom: 8px;
 }
@@ -202,4 +205,15 @@
   font-size: 1.1rem;
   font-weight: 700;
   color: #1e293b;
+}
+
+@media (max-width: 400px) {
+  .reading-word {
+    font-size: 2.5rem;
+    letter-spacing: 1px;
+  }
+  .reading-btn {
+    padding: 14px 20px;
+    font-size: 0.95rem;
+  }
 }
