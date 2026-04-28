@@ -1,0 +1,15 @@
+- generic [ref=e5]:
+  - heading "📚 Kiara's Learning App" [level=1] [ref=e6]
+  - paragraph [ref=e7]: Powered by Mrs. Love
+  - generic [ref=e8]:
+    - generic [ref=e9]: 👩🏾‍🏫
+    - paragraph [ref=e10]: "\"Hello, Kiara! I'm Mrs. Love. Let's learn together! Choose a lesson and we're going to have so much fun!\""
+  - generic [ref=e11]:
+    - button "▶️ Start Lesson (Addition)" [ref=e12] [cursor=pointer]
+    - button "▶️ Start Lesson (Subtraction)" [ref=e13] [cursor=pointer]
+    - button "📖 Start Reading Lesson" [ref=e14] [cursor=pointer]
+    - button "📊 Parent Dashboard" [ref=e15] [cursor=pointer]
+  - paragraph [ref=e17]:
+    - text: 💡
+    - strong [ref=e18]: "For Family:"
+    - text: Share the dashboard link to see Kiara's progress!
