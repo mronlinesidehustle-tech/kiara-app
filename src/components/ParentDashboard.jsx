@@ -10,6 +10,39 @@ export default function ParentDashboard({ studentId, onBack }) {
     averageScore: 0,
   })
   const [isSharedLink, setIsSharedLink] = useState(false)
+  const [readingConfig, setReadingConfig] = useState({ sightWords: '', phonicsWords: '', story: '' })
+  const [readingSaved, setReadingSaved] = useState(false)
+
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(`reading-config-${studentId}`)
+      if (raw) {
+        const cfg = JSON.parse(raw)
+        setReadingConfig({
+          sightWords: (cfg.sightWords || []).join(', '),
+          phonicsWords: (cfg.phonicsWords || []).join(', '),
+          story: cfg.story || '',
+        })
+      }
+    } catch {}
+  }, [studentId])
+
+  const handleSaveReadingConfig = () => {
+    const sightWords = readingConfig.sightWords.split(',').map(w => w.trim().toLowerCase()).filter(Boolean)
+    const phonicsWords = readingConfig.phonicsWords.split(',').map(w => w.trim().toLowerCase()).filter(Boolean)
+    const story = readingConfig.story.trim()
+    localStorage.setItem(`reading-config-${studentId}`, JSON.stringify({ sightWords, phonicsWords, story }))
+    setReadingSaved(true)
+    setTimeout(() => setReadingSaved(false), 2000)
+  }
+
+  const handleResetReadingConfig = () => {
+    localStorage.removeItem(`reading-config-${studentId}`)
+    setReadingConfig({ sightWords: '', phonicsWords: '', story: '' })
+  }
+
+  const readingSessions = sessions.filter(s => s.lessonType === 'reading')
+  const mathSessions = sessions.filter(s => !s.lessonType || s.lessonType !== 'reading')
 
   useEffect(() => {
     // Check if this is a shared link (studentId from URL param)
@@ -74,7 +107,7 @@ export default function ParentDashboard({ studentId, onBack }) {
 
             <div className="sessions-list">
               <h2>Recent Sessions</h2>
-              {sessions.slice().reverse().map((session, idx) => (
+              {mathSessions.slice().reverse().map((session, idx) => (
                 <div key={idx} className="session-card">
                   <div className="session-left">
                     <p className="lesson-name">{session.lesson}</p>
@@ -94,6 +127,36 @@ export default function ParentDashboard({ studentId, onBack }) {
                 </div>
               ))}
             </div>
+
+            {readingSessions.length > 0 && (
+              <div className="sessions-list" style={{ marginTop: 24 }}>
+                <h2>📖 Reading Sessions</h2>
+                {readingSessions.slice().reverse().map((session, idx) => (
+                  <div key={idx} className="session-card">
+                    <div className="session-left">
+                      <p className="lesson-name">Reading Lesson</p>
+                      <p className="session-date">
+                        {new Date(session.timestamp).toLocaleDateString()} @{' '}
+                        {new Date(session.timestamp).toLocaleTimeString()}
+                      </p>
+                      <p style={{ fontSize: '0.85em', color: '#64748b', margin: '2px 0 0' }}>
+                        Sight Words: {session.sightWordsScore ?? '—'}/5 ·{' '}
+                        Phonics: {session.phonicsScore ?? '—'}/5 ·{' '}
+                        Story: {session.storyScore ?? '—'}/{session.storyTotal ?? '—'}
+                      </p>
+                    </div>
+                    <div className="session-right">
+                      <div className="score-badge">
+                        {session.correctAnswers}/{session.totalProblems}
+                      </div>
+                      <p className="percentage">
+                        {Math.round((session.correctAnswers / session.totalProblems) * 100)}%
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
 
             <div className="share-section">
               <h3>📱 Share with Family</h3>
@@ -121,6 +184,56 @@ export default function ParentDashboard({ studentId, onBack }) {
             </div>
           </>
         )}
+
+        <div style={{ marginTop: 32 }}>
+          <h3>📖 Reading Settings</h3>
+          <p style={{ fontSize: '0.9em', color: '#64748b', marginBottom: 16 }}>Leave blank to use the built-in defaults.</p>
+
+          <label style={{ display: 'block', marginBottom: 4, fontWeight: 600, fontSize: '0.85em', color: '#64748b' }}>
+            SIGHT WORDS (comma-separated, min 5)
+          </label>
+          <input
+            style={{ width: '100%', padding: '10px 14px', borderRadius: 10, border: '1px solid #e2e8f0', marginBottom: 14, fontSize: '0.95em', boxSizing: 'border-box' }}
+            value={readingConfig.sightWords}
+            onChange={e => setReadingConfig(c => ({ ...c, sightWords: e.target.value }))}
+            placeholder="the, and, is, are, it, we, go, my, he, she"
+          />
+
+          <label style={{ display: 'block', marginBottom: 4, fontWeight: 600, fontSize: '0.85em', color: '#64748b' }}>
+            PHONICS WORDS (comma-separated, min 5)
+          </label>
+          <input
+            style={{ width: '100%', padding: '10px 14px', borderRadius: 10, border: '1px solid #e2e8f0', marginBottom: 14, fontSize: '0.95em', boxSizing: 'border-box' }}
+            value={readingConfig.phonicsWords}
+            onChange={e => setReadingConfig(c => ({ ...c, phonicsWords: e.target.value }))}
+            placeholder="cat, dog, sun, hat, big, red, fun, sit, hop, map"
+          />
+
+          <label style={{ display: 'block', marginBottom: 4, fontWeight: 600, fontSize: '0.85em', color: '#64748b' }}>
+            SHORT STORY (separate sentences with periods)
+          </label>
+          <textarea
+            style={{ width: '100%', padding: '10px 14px', borderRadius: 10, border: '1px solid #e2e8f0', marginBottom: 14, fontSize: '0.95em', minHeight: 80, resize: 'vertical', boxSizing: 'border-box' }}
+            value={readingConfig.story}
+            onChange={e => setReadingConfig(c => ({ ...c, story: e.target.value }))}
+            placeholder="The cat sat on the mat. It is a big red mat. The cat is happy."
+          />
+
+          <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+            <button
+              onClick={handleSaveReadingConfig}
+              style={{ background: '#2563eb', color: 'white', border: 'none', borderRadius: 20, padding: '10px 24px', fontWeight: 700, cursor: 'pointer' }}
+            >
+              {readingSaved ? '✅ Saved!' : '💾 Save Reading Settings'}
+            </button>
+            <button
+              onClick={handleResetReadingConfig}
+              style={{ background: '#f1f5f9', color: '#475569', border: 'none', borderRadius: 20, padding: '10px 24px', fontWeight: 700, cursor: 'pointer' }}
+            >
+              ↩ Reset to Defaults
+            </button>
+          </div>
+        </div>
       </div>
     </div>
   )
