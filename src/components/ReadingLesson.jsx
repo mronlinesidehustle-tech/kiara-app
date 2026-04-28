@@ -110,6 +110,29 @@ export default function ReadingLesson({ studentId, onBack }) {
     }
   }, [])
 
+  // Auto-speak each word as soon as it appears — no button needed to hear it
+  useEffect(() => {
+    if ((phase === 'sight-words' || phase === 'phonics') && wordList.length > 0) {
+      const word = wordList[wordIndex]
+      if (!word) return
+      // Phonics: speak letters separately so Kiara hears each sound
+      const spoken = phase === 'phonics' ? word.split('').join(', ') : word
+      const rate = phase === 'phonics' ? 0.6 : 0.75
+      const timer = setTimeout(() => speakText(spoken, null, rate), 400)
+      return () => clearTimeout(timer)
+    }
+  }, [wordIndex, phase, wordList])
+
+  // Auto-speak each story sentence slowly as soon as it appears
+  useEffect(() => {
+    if (phase === 'short-story' && sentences.length > 0) {
+      const sentence = sentences[sentenceIndex]
+      if (!sentence) return
+      const timer = setTimeout(() => speakText(sentence, null, 0.65), 400)
+      return () => clearTimeout(timer)
+    }
+  }, [sentenceIndex, phase, sentences])
+
   // ── Intro ────────────────────────────────────────────────
   const handleStart = () => {
     sightScoreRef.current = 0
@@ -127,8 +150,7 @@ export default function ReadingLesson({ studentId, onBack }) {
     setFeedbackType('')
     wordLockedRef.current = false
     setWordLocked(false)
-    setPhase('sight-words')
-    setTimeout(() => speakText("Let's start with some sight words! Can you read this word for me?"), 300)
+    speakText("Let's start with some sight words!", () => setPhase('sight-words'))
   }
 
   // ── Word phase helpers ───────────────────────────────────
@@ -146,7 +168,7 @@ export default function ReadingLesson({ studentId, onBack }) {
           wordLockedRef.current = false
           setWordLocked(false)
           setPhase('phonics')
-          setTimeout(() => speakText("Let's sound this one out together — what does it say?"), 300)
+          // useEffect auto-speaks first phonics word
         })
       } else {
         speakText("You are such a great reader! Now let's read a story!", () => {
@@ -159,7 +181,7 @@ export default function ReadingLesson({ studentId, onBack }) {
           setFeedback('')
           setFeedbackType('')
           setPhase('short-story')
-          setTimeout(() => speakText("Now let's read our story together!"), 300)
+          // useEffect auto-speaks first sentence slowly
         })
       }
     } else {
@@ -169,10 +191,7 @@ export default function ReadingLesson({ studentId, onBack }) {
       setFeedbackType('')
       wordLockedRef.current = false
       setWordLocked(false)
-      const prompt = currentPhase === 'sight-words'
-        ? 'Can you read this word for me?'
-        : "Let's sound this one out together — what does it say?"
-      setTimeout(() => speakText(prompt), 300)
+      // useEffect auto-speaks next word
     }
   }
 
@@ -221,9 +240,12 @@ export default function ReadingLesson({ studentId, onBack }) {
               () => setTimeout(() => advanceWord(capturedPhase, capturedIndex, capturedWordList), 1500)
             )
           } else {
-            setFeedback('Look closely — try again!')
+            setFeedback("Let's try again!")
             setFeedbackType('hint')
-            speakText("Let's try again! Look at the word and say what you see.")
+            // Re-speak word so Kiara hears it again before retrying
+            const spoken = capturedPhase === 'phonics' ? targetWord.split('').join(', ') : targetWord
+            const rate = capturedPhase === 'phonics' ? 0.6 : 0.75
+            speakText("Let's try again!", () => setTimeout(() => speakText(spoken, null, rate), 300))
           }
         }
       },
@@ -233,23 +255,15 @@ export default function ReadingLesson({ studentId, onBack }) {
         else if (err === 'not-allowed') setFeedback('Microphone permission needed.')
       },
       onEnd: () => setIsListening(false),
-      timeout: 20000, // 20 seconds to give Kiara plenty of time
+      timeout: 20000,
     })
 
-    // First, have Mrs. Love sound out the word, then open microphone
-    const prompt = capturedPhase === 'sight-words'
-      ? `Can you read this word? ${targetWord}`
-      : `Let's sound this out together. The word is ${targetWord}. Now you say it.`
-
-    speakText(prompt, () => {
-      if (recognizer) {
-        setTimeout(() => {
-          recognizerRef.current = recognizer
-          recognizer.start()
-          setIsListening(true)
-        }, 800) // 800ms delay for Kiara to prepare
-      }
-    })
+    // Mic starts immediately — word was already auto-spoken on appear
+    if (recognizer) {
+      recognizerRef.current = recognizer
+      recognizer.start()
+      setIsListening(true)
+    }
   }
 
   // ── Story phase: handle "Read this sentence!" tap ────────
@@ -310,19 +324,15 @@ export default function ReadingLesson({ studentId, onBack }) {
         else if (err === 'not-allowed') setFeedback('Microphone permission needed.')
       },
       onEnd: () => setIsListening(false),
-      timeout: 25000, // 25 seconds for full sentence
+      timeout: 25000,
     })
 
-    // First, have Mrs. Love read the sentence, then have Kiara repeat it
-    speakText(`Now you read this: ${targetSentence}`, () => {
-      if (recognizer) {
-        setTimeout(() => {
-          recognizerRef.current = recognizer
-          recognizer.start()
-          setIsListening(true)
-        }, 1000) // 1 second delay for Kiara to prepare
-      }
-    })
+    // Mic starts immediately — sentence was already auto-spoken on appear
+    if (recognizer) {
+      recognizerRef.current = recognizer
+      recognizer.start()
+      setIsListening(true)
+    }
   }
 
   // ── Render ────────────────────────────────────────────────
@@ -345,16 +355,12 @@ export default function ReadingLesson({ studentId, onBack }) {
       ? currentWord.split('').join(' · ')
       : currentWord
     const phaseLabel = phase === 'sight-words' ? 'Sight Words' : 'Phonics'
-    const prompt = phase === 'sight-words'
-      ? '👩🏾‍🏫 "Can you read this word for me?"'
-      : '👩🏾‍🏫 "Let\'s sound this one out — what does it say?"'
 
     return (
       <div className="reading-container">
         <button className="reading-back-btn" onClick={onBack}>← Back</button>
         <div className="reading-content">
           <div className="reading-progress-label">Word {wordIndex + 1} of {wordList.length} · {phaseLabel}</div>
-          <p className="reading-speech">{prompt}</p>
           <div className="reading-word">{displayWord}</div>
           {feedback && <div className={`reading-feedback reading-feedback-${feedbackType}`}>{feedback}</div>}
           <button
@@ -362,7 +368,7 @@ export default function ReadingLesson({ studentId, onBack }) {
             onClick={handleReadWord}
             disabled={wordLocked}
           >
-            {isListening ? '🎙️ Listening...' : '🎤 Read it!'}
+            {isListening ? '🎙️ Listening...' : '🎤 My turn!'}
           </button>
           <div className="reading-dots">
             {wordList.map((_, i) => (
@@ -380,7 +386,6 @@ export default function ReadingLesson({ studentId, onBack }) {
         <button className="reading-back-btn" onClick={onBack}>← Back</button>
         <div className="reading-content">
           <div className="reading-progress-label">Short Story · Sentence {sentenceIndex + 1} of {sentences.length}</div>
-          <p className="reading-speech">👩🏾‍🏫 "Now let's read our story together!"</p>
           <div className="reading-sentences">
             {sentences.map((s, i) => (
               <div
@@ -397,7 +402,7 @@ export default function ReadingLesson({ studentId, onBack }) {
             onClick={handleReadSentence}
             disabled={sentenceLocked}
           >
-            {isListening ? '🎙️ Listening...' : '🎤 Read this sentence!'}
+            {isListening ? '🎙️ Listening...' : '🎤 My turn!'}
           </button>
         </div>
       </div>
