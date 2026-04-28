@@ -3,7 +3,15 @@
  * Listens to Kiara's voice answers using Web Speech API (Chrome/Android Chrome)
  */
 
-export function createSpeechRecognizer({ onResult, onError, onEnd, timeout = 15000 }) {
+export function createSpeechRecognizer({
+  onResult,
+  onError,
+  onEnd,
+  onInterim,
+  timeout = 15000,
+  continuous = false,
+  useInterimResults = false,
+}) {
   const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition
 
   if (!SpeechRecognition) {
@@ -13,14 +21,22 @@ export function createSpeechRecognizer({ onResult, onError, onEnd, timeout = 150
 
   const recognition = new SpeechRecognition()
   recognition.lang = 'en-US'
-  recognition.interimResults = false
+  recognition.interimResults = useInterimResults
   recognition.maxAlternatives = 3
-  recognition.continuous = false
+  recognition.continuous = continuous
 
   let timeoutHandle = null
 
   recognition.onresult = (event) => {
-    const transcripts = Array.from(event.results[0]).map(r => r.transcript.toLowerCase().trim())
+    // Always take the latest result (safe for both continuous and non-continuous)
+    const result = event.results[event.results.length - 1]
+
+    if (!result.isFinal) {
+      onInterim?.({ transcript: result[0].transcript.toLowerCase().trim() })
+      return
+    }
+
+    const transcripts = Array.from(result).map(r => r.transcript.toLowerCase().trim())
     const primary = transcripts[0]
     const number = extractNumber(primary)
     onResult?.({ transcript: primary, number, allTranscripts: transcripts })
@@ -39,11 +55,8 @@ export function createSpeechRecognizer({ onResult, onError, onEnd, timeout = 150
   const originalStart = recognition.start.bind(recognition)
   recognition.start = function() {
     originalStart()
-    // Auto-stop listening after timeout to prevent indefinite listening
     if (timeoutHandle) clearTimeout(timeoutHandle)
-    timeoutHandle = setTimeout(() => {
-      recognition.abort()
-    }, timeout)
+    timeoutHandle = setTimeout(() => recognition.abort(), timeout)
   }
 
   return recognition
@@ -58,10 +71,8 @@ const WORD_TO_NUM = {
 
 export function extractNumber(transcript) {
   if (!transcript) return null
-  // Direct digit match first
   const digitMatch = transcript.match(/\b(\d+)\b/)
   if (digitMatch) return parseInt(digitMatch[1])
-  // Word match
   for (const [word, num] of Object.entries(WORD_TO_NUM)) {
     if (transcript.includes(word)) return num
   }

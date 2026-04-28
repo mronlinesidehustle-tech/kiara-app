@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react'
 import './ReadingLesson.css'
-import { speakText, stopSpeaking } from '../utils/voiceAgent'
+import { speakText, speakWithWordHighlight, stopSpeaking } from '../utils/voiceAgent'
 import { saveProgress } from '../api/kvSync'
 import { createSpeechRecognizer } from '../utils/speechRecognition'
 
@@ -71,6 +71,17 @@ function wordOverlap(spoken, target) {
   return matches.length / targetWords.length
 }
 
+// Map a TTS charIndex boundary event to the word index in the sentence
+function charIndexToWordIdx(text, charIndex) {
+  let pos = 0
+  const words = text.split(' ')
+  for (let i = 0; i < words.length; i++) {
+    if (charIndex >= pos && charIndex < pos + words[i].length + 1) return i
+    pos += words[i].length + 1
+  }
+  return words.length - 1
+}
+
 export default function ReadingLesson({ studentId, onBack }) {
   const [phase, setPhase] = useState('intro')
 
@@ -83,11 +94,10 @@ export default function ReadingLesson({ studentId, onBack }) {
   const [wordLocked, setWordLocked] = useState(false)
   const wordLockedRef = useRef(false)
 
-  // Score refs — refs avoid stale-closure bugs when reading values inside callbacks
+  // Score refs — avoid stale-closure bugs in async callbacks
   const sightScoreRef = useRef(0)
   const phonicsScoreRef = useRef(0)
   const storyScoreRef = useRef(0)
-  // Mirror state for rendering the completion screen
   const [sightScore, setSightScore] = useState(0)
   const [phonicsScore, setPhonicsScore] = useState(0)
   const [storyScore, setStoryScore] = useState(0)
@@ -98,10 +108,15 @@ export default function ReadingLesson({ studentId, onBack }) {
   const [sentenceLocked, setSentenceLocked] = useState(false)
   const sentenceLockedRef = useRef(false)
 
-  // Voice
+  // Word highlighting: which word Mrs. Love is currently saying (boundary event index)
+  const [speakingWordIdx, setSpeakingWordIdx] = useState(-1)
+  // Words Kiara has spoken so far in the current sentence (real-time via interimResults)
+  const [kiaraSpokenWords, setKiaraSpokenWords] = useState(new Set())
+
   const [isListening, setIsListening] = useState(false)
   const recognizerRef = useRef(null)
 
+  // Cleanup on unmount
   useEffect(() => {
     speakText("Hello, Kiara! Let's practice our reading today! We'll do sight words, sound out some words, and then read a story together!")
     return () => {
@@ -110,25 +125,48 @@ export default function ReadingLesson({ studentId, onBack }) {
     }
   }, [])
 
-  // Auto-speak each word as soon as it appears — no button needed to hear it
+  // ── Sight words: say the word when it appears ────────────
   useEffect(() => {
-    if ((phase === 'sight-words' || phase === 'phonics') && wordList.length > 0) {
+    if (phase === 'sight-words' && wordList.length > 0) {
       const word = wordList[wordIndex]
       if (!word) return
-      // Phonics: speak letters separately so Kiara hears each sound
-      const spoken = phase === 'phonics' ? word.split('').join(', ') : word
-      const rate = phase === 'phonics' ? 0.6 : 0.75
-      const timer = setTimeout(() => speakText(spoken, null, rate), 400)
+      const timer = setTimeout(() => speakText(word, null, 0.75), 400)
       return () => clearTimeout(timer)
     }
   }, [wordIndex, phase, wordList])
 
-  // Auto-speak each story sentence slowly as soon as it appears
+  // ── Phonics: spell → sound out slowly → say normally ────
+  useEffect(() => {
+    if (phase === 'phonics' && wordList.length > 0) {
+      const word = wordList[wordIndex]
+      if (!word) return
+      const letters = word.split('').join(', ')
+      const timer = setTimeout(() => {
+        speakText(letters, () => {           // "c, a, t"
+          speakText(word, () => {            // "caaaat" (very slow — sounds it out)
+            speakText(word, null, 0.85)      // "cat" (normal speed)
+          }, 0.45)
+        }, 0.7)
+      }, 400)
+      return () => clearTimeout(timer)
+    }
+  }, [wordIndex, phase, wordList])
+
+  // ── Story: read sentence slowly with word-by-word highlight
   useEffect(() => {
     if (phase === 'short-story' && sentences.length > 0) {
       const sentence = sentences[sentenceIndex]
       if (!sentence) return
-      const timer = setTimeout(() => speakText(sentence, null, 0.65), 400)
+      setSpeakingWordIdx(-1)
+      setKiaraSpokenWords(new Set())
+      const timer = setTimeout(() => {
+        speakWithWordHighlight(
+          sentence,
+          (charIndex) => setSpeakingWordIdx(charIndexToWordIdx(sentence, charIndex)),
+          () => setSpeakingWordIdx(-1),
+          0.55  // slow enough for a 5yr old to follow along
+        )
+      }, 400)
       return () => clearTimeout(timer)
     }
   }, [sentenceIndex, phase, sentences])
@@ -150,6 +188,7 @@ export default function ReadingLesson({ studentId, onBack }) {
     setFeedbackType('')
     wordLockedRef.current = false
     setWordLocked(false)
+    // Say intro once, then phase starts — useEffect speaks first word
     speakText("Let's start with some sight words!", () => setPhase('sight-words'))
   }
 
@@ -181,7 +220,7 @@ export default function ReadingLesson({ studentId, onBack }) {
           setFeedback('')
           setFeedbackType('')
           setPhase('short-story')
-          // useEffect auto-speaks first sentence slowly
+          // useEffect auto-speaks first sentence
         })
       }
     } else {
@@ -195,7 +234,7 @@ export default function ReadingLesson({ studentId, onBack }) {
     }
   }
 
-  // ── Word phase: handle "Read it!" tap ───────────────────
+  // ── Word phase: "My turn!" ───────────────────────────────
   const handleReadWord = () => {
     if (isListening) { recognizerRef.current?.stop(); return }
     if (wordLockedRef.current) return
@@ -210,6 +249,8 @@ export default function ReadingLesson({ studentId, onBack }) {
     const recognizer = createSpeechRecognizer({
       onResult: ({ transcript, allTranscripts }) => {
         if (wordLockedRef.current) return
+        recognizerRef.current?.stop()
+
         const allOptions = [transcript, ...(allTranscripts || [])]
         const normalizedTarget = targetWord.toLowerCase().replace(/[^a-z\s]/g, '').trim()
         const matched = allOptions.some(t => t.toLowerCase().replace(/[^a-z\s]/g, '').trim() === normalizedTarget)
@@ -242,7 +283,7 @@ export default function ReadingLesson({ studentId, onBack }) {
           } else {
             setFeedback("Let's try again!")
             setFeedbackType('hint')
-            // Re-speak word so Kiara hears it again before retrying
+            // Re-speak so Kiara hears it again before retrying
             const spoken = capturedPhase === 'phonics' ? targetWord.split('').join(', ') : targetWord
             const rate = capturedPhase === 'phonics' ? 0.6 : 0.75
             speakText("Let's try again!", () => setTimeout(() => speakText(spoken, null, rate), 300))
@@ -253,20 +294,24 @@ export default function ReadingLesson({ studentId, onBack }) {
         setIsListening(false)
         if (err === 'not-supported') setFeedback('Voice not supported in this browser.')
         else if (err === 'not-allowed') setFeedback('Microphone permission needed.')
+        // 'no-speech' silently ignored — continuous mode keeps listening
       },
       onEnd: () => setIsListening(false),
       timeout: 20000,
+      continuous: true,  // keeps listening through silence — no premature cut-off
     })
 
-    // Mic starts immediately — word was already auto-spoken on appear
-    if (recognizer) {
-      recognizerRef.current = recognizer
-      recognizer.start()
-      setIsListening(true)
-    }
+    // 500ms after TTS cancel so the audio engine fully clears before mic opens
+    setTimeout(() => {
+      if (!wordLockedRef.current) {
+        recognizerRef.current = recognizer
+        recognizer.start()
+        setIsListening(true)
+      }
+    }, 500)
   }
 
-  // ── Story phase: handle "Read this sentence!" tap ────────
+  // ── Story phase ──────────────────────────────────────────
   const advanceSentence = (currentIndex, currentSentences) => {
     const next = currentIndex + 1
     if (next >= currentSentences.length) {
@@ -288,6 +333,8 @@ export default function ReadingLesson({ studentId, onBack }) {
       setSentenceLocked(false)
       setFeedback('')
       setFeedbackType('')
+      setSpeakingWordIdx(-1)
+      setKiaraSpokenWords(new Set())
     }
   }
 
@@ -295,16 +342,21 @@ export default function ReadingLesson({ studentId, onBack }) {
     if (isListening) { recognizerRef.current?.stop(); return }
     if (sentenceLockedRef.current) return
     stopSpeaking()
+    setSpeakingWordIdx(-1)
 
     const targetSentence = sentences[sentenceIndex]
     const capturedIndex = sentenceIndex
     const capturedSentences = sentences
+    const sentenceWords = targetSentence.toLowerCase().replace(/[^a-z\s]/g, '').split(/\s+/).filter(Boolean)
 
     const recognizer = createSpeechRecognizer({
       onResult: ({ transcript }) => {
         if (sentenceLockedRef.current) return
         sentenceLockedRef.current = true
         setSentenceLocked(true)
+        recognizerRef.current?.stop()
+        setKiaraSpokenWords(new Set())
+
         const overlap = wordOverlap(transcript, targetSentence)
         if (overlap >= 0.7) {
           storyScoreRef.current += 1
@@ -318,6 +370,11 @@ export default function ReadingLesson({ studentId, onBack }) {
           speakText("Good try, Kiara! Let's keep going!", () => advanceSentence(capturedIndex, capturedSentences))
         }
       },
+      onInterim: ({ transcript }) => {
+        // Bold words in real-time as Kiara speaks
+        const spoken = new Set(transcript.replace(/[^a-z\s]/g, '').split(/\s+/).filter(Boolean))
+        setKiaraSpokenWords(new Set(sentenceWords.filter(w => spoken.has(w))))
+      },
       onError: (err) => {
         setIsListening(false)
         if (err === 'not-supported') setFeedback('Voice not supported.')
@@ -325,14 +382,17 @@ export default function ReadingLesson({ studentId, onBack }) {
       },
       onEnd: () => setIsListening(false),
       timeout: 25000,
+      continuous: true,
+      useInterimResults: true,
     })
 
-    // Mic starts immediately — sentence was already auto-spoken on appear
-    if (recognizer) {
-      recognizerRef.current = recognizer
-      recognizer.start()
-      setIsListening(true)
-    }
+    setTimeout(() => {
+      if (!sentenceLockedRef.current) {
+        recognizerRef.current = recognizer
+        recognizer.start()
+        setIsListening(true)
+      }
+    }, 500)
   }
 
   // ── Render ────────────────────────────────────────────────
@@ -372,7 +432,10 @@ export default function ReadingLesson({ studentId, onBack }) {
           </button>
           <div className="reading-dots">
             {wordList.map((_, i) => (
-              <span key={i} className={`reading-dot${i < wordIndex ? ' reading-dot-done' : i === wordIndex ? ' reading-dot-active' : ''}`} />
+              <span
+                key={i}
+                className={`reading-dot${i < wordIndex ? ' reading-dot-done' : i === wordIndex ? ' reading-dot-active' : ''}`}
+              />
             ))}
           </div>
         </div>
@@ -387,14 +450,40 @@ export default function ReadingLesson({ studentId, onBack }) {
         <div className="reading-content">
           <div className="reading-progress-label">Short Story · Sentence {sentenceIndex + 1} of {sentences.length}</div>
           <div className="reading-sentences">
-            {sentences.map((s, i) => (
-              <div
-                key={i}
-                className={`reading-sentence${i === sentenceIndex ? ' reading-sentence-active' : i < sentenceIndex ? ' reading-sentence-done' : ' reading-sentence-upcoming'}`}
-              >
-                {s}.
-              </div>
-            ))}
+            {sentences.map((s, i) => {
+              const isActive = i === sentenceIndex
+              const words = s.split(' ')
+              return (
+                <div
+                  key={i}
+                  className={`reading-sentence${isActive ? ' reading-sentence-active' : i < sentenceIndex ? ' reading-sentence-done' : ' reading-sentence-upcoming'}`}
+                >
+                  {isActive ? (
+                    <>
+                      {words.map((word, wi) => {
+                        const clean = word.toLowerCase().replace(/[^a-z]/g, '')
+                        const isMrsLove = wi === speakingWordIdx
+                        const isKiara = kiaraSpokenWords.has(clean)
+                        return (
+                          <span
+                            key={wi}
+                            style={{
+                              fontWeight: (isMrsLove || isKiara) ? 900 : undefined,
+                              color: isKiara ? '#166534' : isMrsLove ? '#7c3aed' : undefined,
+                              transition: 'font-weight 0.1s, color 0.1s',
+                            }}
+                          >
+                            {word}{wi < words.length - 1 ? ' ' : ''}
+                          </span>
+                        )
+                      })}.
+                    </>
+                  ) : (
+                    <>{s}.</>
+                  )}
+                </div>
+              )
+            })}
           </div>
           {feedback && <div className={`reading-feedback reading-feedback-${feedbackType}`}>{feedback}</div>}
           <button

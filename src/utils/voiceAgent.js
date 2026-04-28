@@ -5,21 +5,7 @@
 
 let cachedVoice = null
 
-export function speakText(text, onEnd = null, rate = 0.85) {
-  if (!('speechSynthesis' in window)) {
-    onEnd?.()
-    return
-  }
-
-  window.speechSynthesis.cancel()
-
-  const utterance = new SpeechSynthesisUtterance(text)
-  utterance.rate = rate
-  utterance.pitch = 1.1   // Natural warm female pitch
-  utterance.volume = 1
-
-  if (onEnd) utterance.onend = onEnd
-
+function _resolveVoiceAndSpeak(utterance) {
   const doSpeak = () => {
     if (!cachedVoice) {
       const voices = window.speechSynthesis.getVoices()
@@ -37,7 +23,6 @@ export function speakText(text, onEnd = null, rate = 0.85) {
     window.speechSynthesis.speak(utterance)
   }
 
-  // Voices may not be loaded yet on first call
   const voices = window.speechSynthesis.getVoices()
   if (voices.length) {
     doSpeak()
@@ -47,6 +32,38 @@ export function speakText(text, onEnd = null, rate = 0.85) {
       doSpeak()
     }
   }
+}
+
+export function speakText(text, onEnd = null, rate = 0.85) {
+  if (!('speechSynthesis' in window)) {
+    onEnd?.()
+    return
+  }
+  window.speechSynthesis.cancel()
+  const utterance = new SpeechSynthesisUtterance(text)
+  utterance.rate = rate
+  utterance.pitch = 1.1
+  utterance.volume = 1
+  if (onEnd) utterance.onend = onEnd
+  _resolveVoiceAndSpeak(utterance)
+}
+
+// Speak with word-boundary callbacks for karaoke-style word highlighting
+export function speakWithWordHighlight(text, onWord, onEnd = null, rate = 0.85) {
+  if (!('speechSynthesis' in window)) {
+    onEnd?.()
+    return
+  }
+  window.speechSynthesis.cancel()
+  const utterance = new SpeechSynthesisUtterance(text)
+  utterance.rate = rate
+  utterance.pitch = 1.1
+  utterance.volume = 1
+  utterance.onboundary = (event) => {
+    if (event.name === 'word') onWord?.(event.charIndex)
+  }
+  if (onEnd) utterance.onend = onEnd
+  _resolveVoiceAndSpeak(utterance)
 }
 
 export function stopSpeaking() {
