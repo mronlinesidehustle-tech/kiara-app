@@ -5,7 +5,7 @@
 
 let cachedVoice = null
 
-export function speakText(text, onEnd = null) {
+export function speakText(text, onEnd = null, rate = 0.85) {
   if (!('speechSynthesis' in window)) {
     onEnd?.()
     return
@@ -14,7 +14,7 @@ export function speakText(text, onEnd = null) {
   window.speechSynthesis.cancel()
 
   const utterance = new SpeechSynthesisUtterance(text)
-  utterance.rate = 0.85   // Slightly slower — clear for kindergartner
+  utterance.rate = rate
   utterance.pitch = 1.1   // Natural warm female pitch
   utterance.volume = 1
 
