@@ -1,0 +1,47 @@
+<h2>Reading Module — Parent Dashboard & Progress</h2>
+<p class="subtitle">Section 4 of 4 · How parents see reading data and set custom content</p>
+
+<div class="section">
+  <h3>Progress Tracking</h3>
+  <div class="mockup">
+    <div class="mockup-header">Reading sessions shown in Parent Dashboard</div>
+    <div class="mockup-body" style="line-height:1.9">
+      Each completed session saves:<br>
+      <ul style="margin:8px 0">
+        <li><strong>lessonType: "reading"</strong> — distinguishes from math sessions</li>
+        <li><strong>sightWordsScore</strong> — correct out of 5</li>
+        <li><strong>phonicsScore</strong> — correct out of 5</li>
+        <li><strong>storyScore</strong> — sentences read correctly out of total</li>
+        <li><strong>totalCorrect / totalProblems</strong> — for the existing aggregate stats</li>
+        <li><strong>date / studentId</strong> — same as math</li>
+      </ul>
+      Dashboard gets a new <strong>"📖 Reading"</strong> tab alongside the existing math sessions view.
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <h3>Parent Content Overrides</h3>
+  <div class="mockup">
+    <div class="mockup-header">New "Reading Settings" section inside Parent Dashboard</div>
+    <div class="mockup-body" style="line-height:1.9">
+      <div style="margin-bottom:12px">
+        <div style="font-size:0.8em;color:#888;margin-bottom:4px">SIGHT WORDS (comma-separated)</div>
+        <input class="mock-input" value="the, and, is, are, it, we, go, my, he, she" style="width:100%">
+      </div>
+      <div style="margin-bottom:12px">
+        <div style="font-size:0.8em;color:#888;margin-bottom:4px">PHONICS WORDS (comma-separated)</div>
+        <input class="mock-input" value="cat, dog, sun, hat, big, red, fun, sit, hop, map" style="width:100%">
+      </div>
+      <div style="margin-bottom:12px">
+        <div style="font-size:0.8em;color:#888;margin-bottom:4px">SHORT STORY</div>
+        <textarea class="mock-input" style="width:100%;height:72px;resize:vertical">The cat sat on the mat. It is a big red mat. The cat is happy.</textarea>
+      </div>
+      <button class="mock-button" style="background:#2563eb;color:white;border-radius:20px;padding:10px 28px">💾 Save Reading Settings</button>
+      <button class="mock-button" style="background:#f1f5f9;color:#475569;border-radius:20px;padding:10px 28px;margin-left:8px">↩ Reset to Defaults</button>
+    </div>
+  </div>
+  <p style="margin-top:8px;font-size:0.9em;color:#64748b">Settings saved to localStorage under <code>reading-config-{studentId}</code> — no server changes needed.</p>
+</div>
+
+<p class="subtitle" style="margin-top:24px">Does this look right? Let me know in terminal.</p>

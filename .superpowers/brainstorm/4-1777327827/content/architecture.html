@@ -1,0 +1,40 @@
+<h2>Reading Module — Architecture</h2>
+<p class="subtitle">Section 1 of 4 · Review and confirm before we move on</p>
+
+<div class="section">
+  <h3>New Files</h3>
+  <div class="mockup">
+    <div class="mockup-header">File Structure</div>
+    <div class="mockup-body" style="font-family:monospace;font-size:0.95em;line-height:1.8">
+      src/components/<strong>ReadingLesson.jsx</strong>  ← new<br>
+      src/components/<strong>ReadingLesson.css</strong>  ← new<br>
+      <span style="color:#aaa">src/components/MathLesson1.jsx   (unchanged)</span><br>
+      <span style="color:#aaa">src/components/MathLesson2.jsx   (unchanged)</span><br>
+      <span style="color:#aaa">src/components/ParentDashboard.jsx  (+ reading section)</span><br>
+      <span style="color:#aaa">src/App.jsx  (+ reading-lesson route + home button)</span>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <h3>State Machine (inside ReadingLesson.jsx)</h3>
+  <div class="mockup">
+    <div class="mockup-header">phase state</div>
+    <div class="mockup-body" style="font-family:monospace;font-size:0.95em;line-height:2">
+      <span style="color:#7c3aed">intro</span> → <span style="color:#2563eb">sight-words</span> → <span style="color:#16a34a">phonics</span> → <span style="color:#d97706">short-story</span> → <span style="color:#dc2626">completion</span>
+    </div>
+  </div>
+  <p style="margin-top:12px">Each phase renders its own UI within the same component. A <code>phase</code> state variable drives what's shown — same pattern as <code>step</code> in the math lessons.</p>
+</div>
+
+<div class="section">
+  <h3>Data Flow</h3>
+  <ul style="line-height:2">
+    <li>Default word lists and story are <strong>hardcoded constants</strong> in ReadingLesson.jsx</li>
+    <li>Parent overrides are stored in <strong>localStorage</strong> (key: <code>reading-config-{studentId}</code>) and editable from ParentDashboard</li>
+    <li>On session start, ReadingLesson reads localStorage — falls back to defaults if nothing set</li>
+    <li>Completed session saved via <strong>saveProgress()</strong> (same KV sync as math lessons)</li>
+  </ul>
+</div>
+
+<p class="subtitle" style="margin-top:24px">Does this architecture look right? Let me know in terminal.</p>

@@ -3,7 +3,7 @@
  * Listens to Kiara's voice answers using Web Speech API (Chrome/Android Chrome)
  */
 
-export function createSpeechRecognizer({ onResult, onError, onEnd }) {
+export function createSpeechRecognizer({ onResult, onError, onEnd, timeout = 15000 }) {
   const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition
 
   if (!SpeechRecognition) {
@@ -17,6 +17,8 @@ export function createSpeechRecognizer({ onResult, onError, onEnd }) {
   recognition.maxAlternatives = 3
   recognition.continuous = false
 
+  let timeoutHandle = null
+
   recognition.onresult = (event) => {
     const transcripts = Array.from(event.results[0]).map(r => r.transcript.toLowerCase().trim())
     const primary = transcripts[0]
@@ -25,11 +27,23 @@ export function createSpeechRecognizer({ onResult, onError, onEnd }) {
   }
 
   recognition.onerror = (event) => {
+    if (timeoutHandle) clearTimeout(timeoutHandle)
     onError?.(event.error)
   }
 
   recognition.onend = () => {
+    if (timeoutHandle) clearTimeout(timeoutHandle)
     onEnd?.()
+  }
+
+  const originalStart = recognition.start.bind(recognition)
+  recognition.start = function() {
+    originalStart()
+    // Auto-stop listening after timeout to prevent indefinite listening
+    if (timeoutHandle) clearTimeout(timeoutHandle)
+    timeoutHandle = setTimeout(() => {
+      recognition.abort()
+    }, timeout)
   }
 
   return recognition

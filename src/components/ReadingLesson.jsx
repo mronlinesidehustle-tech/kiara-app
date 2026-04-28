@@ -183,7 +183,6 @@ export default function ReadingLesson({ studentId, onBack }) {
     stopSpeaking()
 
     const targetWord = wordList[wordIndex]
-    // Capture these in closure so they don't go stale inside onResult
     const capturedPhase = phase
     const capturedIndex = wordIndex
     const capturedWordList = wordList
@@ -234,13 +233,23 @@ export default function ReadingLesson({ studentId, onBack }) {
         else if (err === 'not-allowed') setFeedback('Microphone permission needed.')
       },
       onEnd: () => setIsListening(false),
+      timeout: 20000, // 20 seconds to give Kiara plenty of time
     })
 
-    if (recognizer) {
-      recognizerRef.current = recognizer
-      recognizer.start()
-      setIsListening(true)
-    }
+    // First, have Mrs. Love sound out the word, then open microphone
+    const prompt = capturedPhase === 'sight-words'
+      ? `Can you read this word? ${targetWord}`
+      : `Let's sound this out together. The word is ${targetWord}. Now you say it.`
+
+    speakText(prompt, () => {
+      if (recognizer) {
+        setTimeout(() => {
+          recognizerRef.current = recognizer
+          recognizer.start()
+          setIsListening(true)
+        }, 800) // 800ms delay for Kiara to prepare
+      }
+    })
   }
 
   // ── Story phase: handle "Read this sentence!" tap ────────
@@ -301,13 +310,19 @@ export default function ReadingLesson({ studentId, onBack }) {
         else if (err === 'not-allowed') setFeedback('Microphone permission needed.')
       },
       onEnd: () => setIsListening(false),
+      timeout: 25000, // 25 seconds for full sentence
     })
 
-    if (recognizer) {
-      recognizerRef.current = recognizer
-      recognizer.start()
-      setIsListening(true)
-    }
+    // First, have Mrs. Love read the sentence, then have Kiara repeat it
+    speakText(`Now you read this: ${targetSentence}`, () => {
+      if (recognizer) {
+        setTimeout(() => {
+          recognizerRef.current = recognizer
+          recognizer.start()
+          setIsListening(true)
+        }, 1000) // 1 second delay for Kiara to prepare
+      }
+    })
   }
 
   // ── Render ────────────────────────────────────────────────

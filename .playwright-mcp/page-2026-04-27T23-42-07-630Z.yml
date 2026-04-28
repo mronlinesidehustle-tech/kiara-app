@@ -1,0 +1,6 @@
+- generic [ref=e19]:
+  - button "← Back" [ref=e20] [cursor=pointer]
+  - generic [ref=e21]:
+    - generic [ref=e22]: 👩🏾‍🏫
+    - paragraph [ref=e23]: "\"Hello, Kiara! Let's practice our reading today! We'll do sight words, sound out some words, and then read a story together!\""
+    - button "📖 Let's Read!" [ref=e24] [cursor=pointer]
