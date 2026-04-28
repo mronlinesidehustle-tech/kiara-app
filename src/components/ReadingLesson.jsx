@@ -103,6 +103,7 @@ export default function ReadingLesson({ studentId, onBack }) {
   const recognizerRef = useRef(null)
 
   useEffect(() => {
+    speakText("Hello, Kiara! Let's practice our reading today! We'll do sight words, sound out some words, and then read a story together!")
     return () => {
       recognizerRef.current?.stop()
       stopSpeaking()
