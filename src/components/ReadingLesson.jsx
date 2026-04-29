@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react'
 import './ReadingLesson.css'
-import { speakText, speakWithWordHighlight, stopSpeaking } from '../utils/voiceAgent'
+import { speakText, stopSpeaking } from '../utils/voiceAgent'
 import { saveProgress } from '../api/kvSync'
 import { createSpeechRecognizer } from '../utils/speechRecognition'
 
@@ -71,16 +71,6 @@ function wordOverlap(spoken, target) {
   return matches.length / targetWords.length
 }
 
-// Map a TTS charIndex boundary event to the word index in the sentence
-function charIndexToWordIdx(text, charIndex) {
-  let pos = 0
-  const words = text.split(' ')
-  for (let i = 0; i < words.length; i++) {
-    if (charIndex >= pos && charIndex < pos + words[i].length + 1) return i
-    pos += words[i].length + 1
-  }
-  return words.length - 1
-}
 
 export default function ReadingLesson({ studentId, onBack }) {
   const [phase, setPhase] = useState('intro')
@@ -152,22 +142,35 @@ export default function ReadingLesson({ studentId, onBack }) {
     }
   }, [wordIndex, phase, wordList])
 
-  // ── Story: read sentence slowly with word-by-word highlight
+  // ── Story: read sentence slowly with timer-based word highlight
+  // (boundary events unreliable on Android Chrome — timers are cross-platform)
   useEffect(() => {
     if (phase === 'short-story' && sentences.length > 0) {
       const sentence = sentences[sentenceIndex]
       if (!sentence) return
       setSpeakingWordIdx(-1)
       setKiaraSpokenWords(new Set())
-      const timer = setTimeout(() => {
-        speakWithWordHighlight(
-          sentence,
-          (charIndex) => setSpeakingWordIdx(charIndexToWordIdx(sentence, charIndex)),
-          () => setSpeakingWordIdx(-1),
-          0.55  // slow enough for a 5yr old to follow along
-        )
+
+      const words = sentence.split(' ')
+      const wordTimers = []
+
+      const outerTimer = setTimeout(() => {
+        speakText(sentence, () => setSpeakingWordIdx(-1), 0.55)
+
+        // Fire one timer per word at estimated intervals for rate 0.55
+        let offset = 100  // small lead so first highlight aligns with first word spoken
+        words.forEach((word, wi) => {
+          const t = setTimeout(() => setSpeakingWordIdx(wi), offset)
+          wordTimers.push(t)
+          offset += Math.max(350, word.length * 80)
+        })
       }, 400)
-      return () => clearTimeout(timer)
+
+      return () => {
+        clearTimeout(outerTimer)
+        wordTimers.forEach(clearTimeout)
+        setSpeakingWordIdx(-1)
+      }
     }
   }, [sentenceIndex, phase, sentences])
 
@@ -245,29 +248,45 @@ export default function ReadingLesson({ studentId, onBack }) {
     const capturedIndex = wordIndex
     const capturedWordList = wordList
     let capturedAttempt = attemptCount
+    const normalizedTarget = targetWord.toLowerCase().replace(/[^a-z]/g, '')
+
+    const acceptWord = () => {
+      if (wordLockedRef.current) return
+      wordLockedRef.current = true
+      setWordLocked(true)
+      recognizerRef.current?.stop()
+      setFeedback('✅ You got it!')
+      setFeedbackType('correct')
+      if (capturedPhase === 'sight-words') {
+        sightScoreRef.current += 1
+        setSightScore(sightScoreRef.current)
+      } else {
+        phonicsScoreRef.current += 1
+        setPhonicsScore(phonicsScoreRef.current)
+      }
+      speakText(randomPraise(), () => advanceWord(capturedPhase, capturedIndex, capturedWordList))
+    }
 
     const recognizer = createSpeechRecognizer({
+      onInterim: ({ transcript }) => {
+        // Match the moment the target word appears in Kiara's partial transcript
+        if (wordLockedRef.current) return
+        const words = transcript.replace(/[^a-z\s]/g, '').split(/\s+/)
+        if (words.includes(normalizedTarget)) acceptWord()
+      },
       onResult: ({ transcript, allTranscripts }) => {
         if (wordLockedRef.current) return
         recognizerRef.current?.stop()
 
         const allOptions = [transcript, ...(allTranscripts || [])]
-        const normalizedTarget = targetWord.toLowerCase().replace(/[^a-z\s]/g, '').trim()
-        const matched = allOptions.some(t => t.toLowerCase().replace(/[^a-z\s]/g, '').trim() === normalizedTarget)
+        // Accept exact full-transcript match OR word appears anywhere in transcript
+        const matched = allOptions.some(t => {
+          const norm = t.toLowerCase().replace(/[^a-z\s]/g, '').trim()
+          return norm === normalizedTarget || norm.split(/\s+/).includes(normalizedTarget)
+        })
 
         if (matched) {
-          wordLockedRef.current = true
-          setWordLocked(true)
-          setFeedback('✅ You got it!')
-          setFeedbackType('correct')
-          if (capturedPhase === 'sight-words') {
-            sightScoreRef.current += 1
-            setSightScore(sightScoreRef.current)
-          } else {
-            phonicsScoreRef.current += 1
-            setPhonicsScore(phonicsScoreRef.current)
-          }
-          speakText(randomPraise(), () => advanceWord(capturedPhase, capturedIndex, capturedWordList))
+          acceptWord()
         } else {
           capturedAttempt += 1
           setAttemptCount(capturedAttempt)
@@ -283,7 +302,6 @@ export default function ReadingLesson({ studentId, onBack }) {
           } else {
             setFeedback("Let's try again!")
             setFeedbackType('hint')
-            // Re-speak so Kiara hears it again before retrying
             const spoken = capturedPhase === 'phonics' ? targetWord.split('').join(', ') : targetWord
             const rate = capturedPhase === 'phonics' ? 0.6 : 0.75
             speakText("Let's try again!", () => setTimeout(() => speakText(spoken, null, rate), 300))
@@ -294,11 +312,11 @@ export default function ReadingLesson({ studentId, onBack }) {
         setIsListening(false)
         if (err === 'not-supported') setFeedback('Voice not supported in this browser.')
         else if (err === 'not-allowed') setFeedback('Microphone permission needed.')
-        // 'no-speech' silently ignored — continuous mode keeps listening
       },
       onEnd: () => setIsListening(false),
       timeout: 20000,
-      continuous: true,  // keeps listening through silence — no premature cut-off
+      continuous: true,
+      useInterimResults: true,
     })
 
     // 500ms after TTS cancel so the audio engine fully clears before mic opens
@@ -349,25 +367,39 @@ export default function ReadingLesson({ studentId, onBack }) {
     const capturedSentences = sentences
     const sentenceWords = targetSentence.toLowerCase().replace(/[^a-z\s]/g, '').split(/\s+/).filter(Boolean)
 
+    // Accumulate all partial final results so a mid-sentence pause doesn't end early
+    let accumulatedTranscript = ''
+
+    const evaluateAndAdvance = () => {
+      if (sentenceLockedRef.current) return
+      sentenceLockedRef.current = true
+      setSentenceLocked(true)
+      setKiaraSpokenWords(new Set())
+
+      const overlap = wordOverlap(accumulatedTranscript, targetSentence)
+      if (overlap >= 0.7) {
+        storyScoreRef.current += 1
+        setStoryScore(storyScoreRef.current)
+        setFeedback('✅ Great reading!')
+        setFeedbackType('correct')
+        speakText(randomPraise(), () => advanceSentence(capturedIndex, capturedSentences))
+      } else {
+        setFeedback("Good try! Let's keep going.")
+        setFeedbackType('hint')
+        speakText("Good try, Kiara! Let's keep going!", () => advanceSentence(capturedIndex, capturedSentences))
+      }
+    }
+
     const recognizer = createSpeechRecognizer({
       onResult: ({ transcript }) => {
         if (sentenceLockedRef.current) return
-        sentenceLockedRef.current = true
-        setSentenceLocked(true)
-        recognizerRef.current?.stop()
-        setKiaraSpokenWords(new Set())
+        // Append to running transcript so pauses don't cut us off early
+        accumulatedTranscript = (accumulatedTranscript + ' ' + transcript).trim()
 
-        const overlap = wordOverlap(transcript, targetSentence)
-        if (overlap >= 0.7) {
-          storyScoreRef.current += 1
-          setStoryScore(storyScoreRef.current)
-          setFeedback('✅ Great reading!')
-          setFeedbackType('correct')
-          speakText(randomPraise(), () => advanceSentence(capturedIndex, capturedSentences))
-        } else {
-          setFeedback("Good try! Let's keep going.")
-          setFeedbackType('hint')
-          speakText("Good try, Kiara! Let's keep going!", () => advanceSentence(capturedIndex, capturedSentences))
+        // Score as soon as we have enough — don't wait for timeout
+        if (wordOverlap(accumulatedTranscript, targetSentence) >= 0.7) {
+          recognizerRef.current?.stop()
+          evaluateAndAdvance()
         }
       },
       onInterim: ({ transcript }) => {
@@ -380,7 +412,11 @@ export default function ReadingLesson({ studentId, onBack }) {
         if (err === 'not-supported') setFeedback('Voice not supported.')
         else if (err === 'not-allowed') setFeedback('Microphone permission needed.')
       },
-      onEnd: () => setIsListening(false),
+      // onEnd fires on timeout or explicit stop — evaluate whatever we accumulated
+      onEnd: () => {
+        setIsListening(false)
+        evaluateAndAdvance()
+      },
       timeout: 25000,
       continuous: true,
       useInterimResults: true,
